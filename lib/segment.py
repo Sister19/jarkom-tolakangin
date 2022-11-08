@@ -114,7 +114,6 @@ class Segment:
         self.flag = SegmentFlag(temp[2])
         self.checksum = temp[4]
         self.data = src[12:]
-        pass
 
     def get_bytes(self) -> bytes:
         # Convert this object to pure bytes
@@ -144,4 +143,3 @@ if __name__ == "__main__":
     print(type(sampleseg.data))
     # print(sampleseg.get_payload())
     print(sampleseg.get_bytes())
-    pass
