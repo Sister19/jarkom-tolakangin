@@ -38,7 +38,7 @@ class Segment:
     # 8       : flag (1 byte, unsigned char)
     # 9       : kosong (1 byte, unsigned char)
     # 10-11   : checksum (2 bytes, unsigned short)
-    # 12-3767 : data (3756 bytes)
+    # 12-3767 : data (32756 bytes)
 
     # -- Internal Function --
     def __init__(self):
@@ -46,22 +46,37 @@ class Segment:
         self.seq_num = 0b0
         self.ack_num = 0b0
         self.flag = SegmentFlag(0b0)
-        self.checksum = 0b0
         self.data = b''
+        self.checksum = self.__calculate_checksum()
 
     def __str__(self):
-        output = ""
-        output += f'seq_num: {self.seq_num}\n'
-        output += f'ack_num: {self.ack_num}\n'
-        output += f'flag: {self.flag}\n'
-        output += f'checksum: {self.checksum}\n'
-        output += f'data: {self.data}\n'
+        output = "{"
+        output += f'\tseq_num: {self.seq_num}\n'
+        output += f'\tack_num: {self.ack_num}\n'
+        output += f'\tflag: {self.flag}\n'
+        output += f'\tchecksum: {self.checksum}\n'
+        output += f'\tdata: {self.data}\n'
+        output += "}"
         return output
 
+    # def __calculate_checksum(self) -> bytes:
     def __calculate_checksum(self) -> int:
         # Calculate checksum here, return checksum result
-        # kalkulasi menggunakan CRC polinomial
-        pass
+        # kalkulasi checksum menggunakan 16-bit 1's complement.
+        # tambah 2 byte pertama dan 2 byte terakhir seq_num
+        sums = ((self.seq_num & 0xFF) + (self.seq_num >> 16)) & 0xFF
+        # tambah 2 byte pertama dan 2 byte terakhir ack_num
+        sums = (sums + (self.ack_num & 0xFF) + (self.ack_num >> 16)) & 0xFF
+        # tambah flag
+        sums = (sums + self.flag.get_flag_bytes()) & 0xFF
+        # jumlahkan data per 2 byte payload
+        for i in range(0, len(self.data), 2):
+            if i + 1 < len(self.data):
+                sums = (sums + struct.unpack('H', self.data[i:i+2])[0]) & 0xFF
+            else:
+                sums = (sums + struct.unpack('B', self.data[i:i+1])[0]) & 0xFF
+        # kembalikan hasil
+        return ~sums & 0xFF
 
     # -- Setter --
 
@@ -70,22 +85,24 @@ class Segment:
         #   'seq_num': int,
         #   'ack_num': int,
         #   'flag': SegmentFlag,
-        #   'checksum': int,
         #   'data': bytes
         # }
         self.seq_num = header['seq_num']
         self.ack_num = header['ack_num']
         self.flag = header['flag']
-        self.checksum = header['checksum']
         self.data = header['data']
+        self.checksum = self.__calculate_checksum()
 
     def set_payload(self, payload: bytes):
         # ambil data dari payload
         self.data = payload
+        self.checksum = self.__calculate_checksum()
 
     def set_flag(self, flag_list: list):
         # asumsi flag_list = [fin: bool, syn: bool, ack: bool]
-        self.flag = SegmentFlag(flag_list[0] | flag_list[1] << 1 | flag_list[2] << 4)
+        self.flag = SegmentFlag(
+            flag_list[0] | flag_list[1] << 1 | flag_list[2] << 4)
+        self.checksum = self.__calculate_checksum()
 
     # -- Getter --
 
@@ -108,6 +125,7 @@ class Segment:
 
     def set_from_bytes(self, src: bytes):
         # From pure bytes, unpack() and set into python variable
+        # asumsi src adalah bytes yang valid termasuk checksumnya
         temp = struct.unpack('IIBBH', src)
         self.seq_num = temp[0]
         self.ack_num = temp[1]
@@ -118,20 +136,24 @@ class Segment:
     def get_bytes(self) -> bytes:
         # Convert this object to pure bytes
         return struct.pack('IIBBH',
-                            self.seq_num,
-                            self.ack_num,
-                            self.flag.get_flag_bytes(), 0b0, self.checksum) + self.data
+                           self.seq_num,
+                           self.ack_num,
+                           self.flag.get_flag_bytes(), 0b0, self.checksum) + self.data
 
     # -- Checksum --
 
     def valid_checksum(self) -> bool:
         # Use __calculate_checksum() and check integrity of this object
-        pass
+        return self.__calculate_checksum() == self.checksum
 
 
 if __name__ == "__main__":
     sampleseg = Segment()
+
     sampleseg.set_flag([1, 0, 1])
+    print(sampleseg.get_flag())
+    print(sampleseg.valid_checksum())
+
     sampleseg.set_header({
         'seq_num': 1,
         'ack_num': 2,
@@ -139,6 +161,13 @@ if __name__ == "__main__":
         'checksum': 0,
         'data': sampleseg.get_payload()
     })
+    print(sampleseg.get_header())
+    print(sampleseg.valid_checksum())
+
     sampleseg.set_payload(b'test payload keren banget')
     print(sampleseg.get_payload())
-    print(sampleseg.get_bytes())
+    print(sampleseg.valid_checksum())
+
+    sampleseg.data = b'test payload nahloh ganti paksa'
+    print(sampleseg.get_payload())
+    print(sampleseg.valid_checksum())
