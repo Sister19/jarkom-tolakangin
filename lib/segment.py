@@ -46,7 +46,7 @@ class Segment:
         self.seq_num = 0b0
         self.ack_num = 0b0
         self.flag = SegmentFlag(0b0)
-        self.data = b''
+        self.payload = b''
         self.checksum = self.__calculate_checksum()
 
     def __str__(self):
@@ -55,7 +55,7 @@ class Segment:
         output += f'\tack_num: {self.ack_num}\n'
         output += f'\tflag: {self.flag}\n'
         output += f'\tchecksum: {self.checksum}\n'
-        output += f'\tdata: {self.data}\n'
+        output += f'\tdata: {self.payload}\n'
         output += "}"
         return output
 
@@ -70,11 +70,11 @@ class Segment:
         # tambah flag
         sums = (sums + self.flag.get_flag_bytes()) & 0xFF
         # jumlahkan data per 2 byte payload
-        for i in range(0, len(self.data), 2):
-            if i + 1 < len(self.data):
-                sums = (sums + struct.unpack('H', self.data[i:i+2])[0]) & 0xFF
+        for i in range(0, len(self.payload), 2):
+            if i + 1 < len(self.payload):
+                sums = (sums + struct.unpack('H', self.payload[i:i+2])[0]) & 0xFF
             else:
-                sums = (sums + struct.unpack('B', self.data[i:i+1])[0]) & 0xFF
+                sums = (sums + struct.unpack('B', self.payload[i:i+1])[0]) & 0xFF
         # kembalikan hasil
         return ~sums & 0xFF
 
@@ -90,12 +90,12 @@ class Segment:
         self.seq_num = header['seq_num']
         self.ack_num = header['ack_num']
         self.flag = header['flag']
-        self.data = header['data']
+        self.payload = header['data']
         self.checksum = self.__calculate_checksum()
 
     def set_payload(self, payload: bytes):
         # ambil data dari payload
-        self.data = payload
+        self.payload = payload
         self.checksum = self.__calculate_checksum()
 
     def set_flag(self, flag_list: list):
@@ -115,11 +115,11 @@ class Segment:
             'ack_num': self.ack_num,
             'flag': self.flag,
             'checksum': self.checksum,
-            'data': self.data
+            'data': self.payload
         }
 
     def get_payload(self) -> bytes:
-        return bytes(self.data)
+        return bytes(self.payload)
 
     # -- Marshalling --
 
@@ -131,14 +131,14 @@ class Segment:
         self.ack_num = temp[1]
         self.flag = SegmentFlag(temp[2])
         self.checksum = temp[4]
-        self.data = src[12:]
+        self.payload = src[12:]
 
     def get_bytes(self) -> bytes:
         # Convert this object to pure bytes
         return struct.pack('IIBBH',
                            self.seq_num,
                            self.ack_num,
-                           self.flag.get_flag_bytes(), 0b0, self.checksum) + self.data
+                           self.flag.get_flag_bytes(), 0b0, self.checksum) + self.payload
 
     # -- Checksum --
 
@@ -168,6 +168,6 @@ if __name__ == "__main__":
     print(sampleseg.get_payload())
     print(sampleseg.valid_checksum())
 
-    sampleseg.data = b'test payload nahloh ganti paksa'
+    sampleseg.payload = b'test payload nahloh ganti paksa'
     print(sampleseg.get_payload())
     print(sampleseg.valid_checksum())
