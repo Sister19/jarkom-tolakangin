@@ -117,10 +117,10 @@ class Segment:
 
     def get_bytes(self) -> bytes:
         # Convert this object to pure bytes
-        return struct.pack('IIBBHs',
+        return struct.pack('IIBBH',
                             self.seq_num,
                             self.ack_num,
-                            self.flag.get_flag_bytes(), 0b0, self.checksum, self.data)
+                            self.flag.get_flag_bytes(), 0b0, self.checksum) + self.data
 
     # -- Checksum --
 
@@ -132,7 +132,6 @@ class Segment:
 if __name__ == "__main__":
     sampleseg = Segment()
     sampleseg.set_flag([1, 0, 1])
-    sampleseg.set_payload(0b01010101)
     sampleseg.set_header({
         'seq_num': 1,
         'ack_num': 2,
@@ -140,6 +139,6 @@ if __name__ == "__main__":
         'checksum': 0,
         'data': sampleseg.get_payload()
     })
-    print(type(sampleseg.data))
-    # print(sampleseg.get_payload())
+    sampleseg.set_payload(b'test payload keren banget')
+    print(sampleseg.get_payload())
     print(sampleseg.get_bytes())
