@@ -126,7 +126,7 @@ class Segment:
     def set_from_bytes(self, src: bytes):
         # From pure bytes, unpack() and set into python variable
         # asumsi src adalah bytes yang valid termasuk checksumnya
-        temp = struct.unpack('IIBBH', src)
+        temp = struct.unpack('IIBBH', src[:12])
         self.seq_num = temp[0]
         self.ack_num = temp[1]
         self.flag = SegmentFlag(temp[2])
