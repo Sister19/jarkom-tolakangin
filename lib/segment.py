@@ -102,7 +102,7 @@ class Segment:
         }
 
     def get_payload(self) -> bytes:
-        return self.data
+        return bytes(self.data)
 
     # -- Marshalling --
 
@@ -118,10 +118,10 @@ class Segment:
 
     def get_bytes(self) -> bytes:
         # Convert this object to pure bytes
-        return struct.pack('IIBBH',
+        return struct.pack('IIBBHs',
                             self.seq_num,
                             self.ack_num,
-                            self.flag.get_flag_bytes(), 0b0, self.checksum) + self.data
+                            self.flag.get_flag_bytes(), 0b0, self.checksum, self.data)
 
     # -- Checksum --
 
@@ -131,11 +131,9 @@ class Segment:
 
 
 if __name__ == "__main__":
-    print("segment.py demo")
-    # print(SegmentFlag(0b10010))
     sampleseg = Segment()
     sampleseg.set_flag([1, 0, 1])
-    sampleseg.set_payload('hello')
+    sampleseg.set_payload(0b01010101)
     sampleseg.set_header({
         'seq_num': 1,
         'ack_num': 2,
@@ -143,5 +141,7 @@ if __name__ == "__main__":
         'checksum': 0,
         'data': sampleseg.get_payload()
     })
-    print(sampleseg)
+    print(type(sampleseg.data))
+    # print(sampleseg.get_payload())
+    print(sampleseg.get_bytes())
     pass
