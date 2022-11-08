@@ -38,7 +38,7 @@ class Segment:
     # 8       : flag (1 byte, unsigned char)
     # 9       : kosong (1 byte, unsigned char)
     # 10-11   : checksum (2 bytes, unsigned short)
-    # 12-3767 : data (32756 bytes)
+    # 12-3767 : payload (32756 bytes)
 
     # -- Internal Function --
     def __init__(self):
@@ -55,7 +55,7 @@ class Segment:
         output += f'\tack_num: {self.ack_num}\n'
         output += f'\tflag: {self.flag}\n'
         output += f'\tchecksum: {self.checksum}\n'
-        output += f'\tdata: {self.payload}\n'
+        output += f'\tpayload: {self.payload}\n'
         output += "}"
         return output
 
@@ -85,12 +85,12 @@ class Segment:
         #   'seq_num': int,
         #   'ack_num': int,
         #   'flag': SegmentFlag,
-        #   'data': bytes
+        #   'payload': bytes
         # }
         self.seq_num = header['seq_num']
         self.ack_num = header['ack_num']
         self.flag = header['flag']
-        self.payload = header['data']
+        self.payload = header['payload']
         self.checksum = self.__calculate_checksum()
 
     def set_payload(self, payload: bytes):
@@ -115,7 +115,7 @@ class Segment:
             'ack_num': self.ack_num,
             'flag': self.flag,
             'checksum': self.checksum,
-            'data': self.payload
+            'payload': self.payload
         }
 
     def get_payload(self) -> bytes:
@@ -159,7 +159,7 @@ if __name__ == "__main__":
         'ack_num': 2,
         'flag': sampleseg.get_flag(),
         'checksum': 0,
-        'data': sampleseg.get_payload()
+        'payload': sampleseg.get_payload()
     })
     print(sampleseg.get_header())
     print(sampleseg.valid_checksum())
