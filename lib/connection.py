@@ -11,15 +11,15 @@ class Connection:
 
     def send_data(self, msg : Segment, Tuple : Union[str, int] = None):
         # Send single segment into destination
-        self.socket.sendto(msg.get_bytes(), (self.ip, self.port))
+        self.socket.sendto(msg.get_bytes(), Tuple)
 
     def listen_single_segment(self) -> Segment:
         # Listen single UDP datagram within timeout and convert into segment
         # 32768 is buffer size
-        data, _ = self.socket.recvfrom(32768)
+        data, addr = self.socket.recvfrom(32768)
         seg = Segment()
         seg.set_from_bytes(data)
-        return seg
+        return seg, addr
 
     def close_socket(self):
         # Release UDP socket
