@@ -116,6 +116,15 @@ class Segment:
     def get_flag(self) -> SegmentFlag:
         return self.flag
 
+    def get_syn(self) -> bool:
+        return self.flag.syn
+
+    def get_ack(self) -> bool:
+        return self.flag.ack
+
+    def get_fin(self) -> bool:
+        return self.flag.fin
+
     def get_header(self) -> dict:
         return {
             'seq_num': self.seq_num,
