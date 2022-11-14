@@ -26,7 +26,6 @@ class Server:
                 self.clients[addr] = data
                 isListenMore = input("Listen more? (y/n)")
                 if isListenMore == "n":
-                    # print(data)
                     break
         print("\nClient list:")
         for idx, (key, _val) in enumerate(self.clients.items()):
@@ -49,22 +48,24 @@ class Server:
     def three_way_handshake(self, client_addr: Union[str, int]) -> bool:
         # Three way handshake, server-side, 1 client
 
-        # STEP 2: SYN-ACK from server
-        print(f"[!] [Handshake] Sending SYN-ACK")
-        data: Segment = self.clients[client_addr]
-        header = data.get_header()
-        clientACK = header['seq_num']
-        seqNum = random.randint(0,2**32-1)
-        data.set_header({
-        'seq_num': seqNum,
-        'ack_num': clientACK+1,
-    })
-        data.set_flag([0,1,1])
-        self.conn.send_data(data, client_addr)
-        while True:
-            data, addr = self.conn.listen_single_segment()
-            if (data):
-                print("received")
+        # STEP 2: SYN-ACK from server to client
+        if self.clients[client_addr].get_syn() == 1:
+            print(f"[!] [Handshake] Sending SYN-ACK")
+            data: Segment = self.clients[client_addr]
+            header = data.get_header()
+            clientACK = header['seq_num']
+            seqNum = random.randint(0,2**32-1)
+            data.set_header({
+            'seq_num': seqNum,
+            'ack_num': clientACK+1,
+            })
+            data.set_flag([0,1,1])
+            # print(data)
+            self.conn.send_data(data, client_addr)
+
+            dataEstablished, addr = self.conn.listen_single_segment()
+            if dataEstablished.get_ack() == 1:
+                print("[!] [Handshake] Connection established.\n")
 
 
 if __name__ == '__main__':
