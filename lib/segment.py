@@ -30,6 +30,9 @@ class SegmentFlag:
         # Convert this object to flag in byte form
         return self.flag_bytes
 
+    def isSyn(self) -> bool:
+        return 
+
 
 class Segment:
     # SEGMENT FORMAT
@@ -87,10 +90,14 @@ class Segment:
         #   'flag': SegmentFlag,
         #   'payload': bytes
         # }
-        self.seq_num = header['seq_num']
-        self.ack_num = header['ack_num']
-        self.flag = header['flag']
-        self.payload = header['payload']
+        if ('seq_num' in header.keys()):
+            self.seq_num = header['seq_num']
+        if ('ack_num' in header.keys()):
+            self.ack_num = header['ack_num']
+        if ('flag' in header.keys()):
+            self.flag = header['flag']
+        if ('payload' in header.keys()):
+            self.payload = header['payload']
         self.checksum = self.__calculate_checksum()
 
     def set_payload(self, payload: bytes):
@@ -161,8 +168,8 @@ if __name__ == "__main__":
         'checksum': 0,
         'payload': sampleseg.get_payload()
     })
-    print(sampleseg.get_header())
-    print(sampleseg.valid_checksum())
+    print('get_header', sampleseg.get_header())
+    print('valid checksum', sampleseg.valid_checksum())
 
     sampleseg.set_payload(b'test payload keren banget')
     print(sampleseg.get_payload())
