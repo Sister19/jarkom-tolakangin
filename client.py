@@ -17,7 +17,7 @@ class Client:
         # Three Way Handshake, client-side
         # STEP 1: SYN, initiate connection
         self.segment.set_flag([0, 1, 0]) # SYN flag
-        seqNum = random.randint(0,2**32-1)
+        seqNum = 100
         self.segment.set_payload(b'test send data')
         self.segment.set_header({
         'seq_num': seqNum,
@@ -36,20 +36,23 @@ class Client:
 
         data, addr = self.conn.listen_single_segment()
         if data.get_syn() == 1 and data.get_ack() == 1:
-            print("[!] [Handshake] SYN-ACK received.")
+            if data.valid_checksum():
+                print("[!] [Handshake] SYN-ACK received.")
 
-            # STEP 3: send ACK from client to server
-            data.set_flag([0,0,1])
-            header = data.get_header()
-            serverACK = header['ack_num']
-            serverSeq = header['seq_num']
-            data.set_header({
-            'seq_num': serverACK,
-            'ack_num': serverSeq+1,
-            })
-            print("[!] [Handshake] Connection established. Sending ACK.")
-            self.conn.send_data(data, (self.host,self.destPort))
-            # print(data)
+                # STEP 3: send ACK from client to server
+                data.set_flag([0,0,1])
+                header = data.get_header()
+                serverACK = header['ack_num']
+                serverSeq = header['seq_num']
+                data.set_header({
+                'seq_num': serverACK,
+                'ack_num': serverSeq+1,
+                })
+                print("[!] [Handshake] Connection established. Sending ACK.")
+                self.conn.send_data(data, (self.host,self.destPort))
+                # print(data)
+            else:
+                print("[!] [Handhshake] Checksum failed. Connection is terminated.")
 
     def listen_file_transfer(self):
         # File transfer, client-side
