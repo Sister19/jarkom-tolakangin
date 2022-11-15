@@ -4,10 +4,11 @@ import lib.segment as segment
 import random
 
 class Client:
-    def __init__(self, host, port):
+    def __init__(self, host, port, destPort):
         # Init client
         self.host = host
         self.port = port
+        self.destPort = destPort
         self.conn = lib.connection.Connection(host,port)
         self.segment = segment.Segment()
         print(f" [!] Client started at {self.host}:{self.port}")
@@ -27,9 +28,9 @@ class Client:
 
         print("[!] Initiating three way handshake...")
 
-        self.conn.send_data(self.segment, (self.host,self.port))
+        self.conn.send_data(self.segment, (self.host,self.destPort))
 
-        print(f"[!] [Handshake] Sending broadcast SYN request to port {self.port}")
+        print(f"[!] [Handshake] Sending broadcast SYN request to port {self.destPort}")
         # print(self.segment)
         print("[!] [Handshake] Waiting for response...")
 
@@ -47,7 +48,7 @@ class Client:
             'ack_num': serverSeq+1,
             })
             print("[!] [Handshake] Connection established. Sending ACK.")
-            self.conn.send_data(data, (self.host,self.port))
+            self.conn.send_data(data, (self.host,self.destPort))
             # print(data)
 
     def listen_file_transfer(self):
@@ -56,6 +57,6 @@ class Client:
 
 
 if __name__ == '__main__':
-    main = Client('localhost',50007)
+    main = Client('localhost',50006,50007)
     main.three_way_handshake()
     # main.listen_file_transfer()
