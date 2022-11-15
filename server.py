@@ -54,7 +54,25 @@ class Server:
 
     def file_transfer(self, client_addr : Union[str, int]):
         # File transfer, server-side, Send file to 1 client
-        pass
+        data: Segment = self.clients[client_addr]
+        header = data.get_header()
+        prevSeq = header['seq_num']
+        prevACK = header['ack_num']
+        data.set_flag([0,0,0])
+        data.set_header({
+            'seq_num': prevACK,
+            'ack_num': prevSeq+1
+        })
+        data.set_payload(self.payload)
+        self.conn.send_data(data, client_addr)
+        print(f"[Segment SEQ={prevACK}] Sent")
+
+        resData, addr = self.conn.listen_single_segment()
+        header = resData.get_header()
+        prevSeq = header['seq_num']
+        prevACK = header['ack_num']
+        if resData.get_ack():
+            print(f"[Segment SEQ={prevACK-1}] Acked")
 
     def three_way_handshake(self, client_addr: Union[str, int]) -> bool:
         # Three way handshake, server-side, 1 client
@@ -78,7 +96,8 @@ class Server:
                 dataEstablished, addr = self.conn.listen_single_segment()
                 if dataEstablished.get_ack() == 1:
                     if dataEstablished.valid_checksum():
-                        print("[!] [Handshake] Connection established.\n")
+                        print("[!] [Handshake] Connection established.")
+                        self.file_transfer(client_addr)
                     else:
                         print("[!] [Handhshake] Checksum failed. Connection is terminated.")
             else:
@@ -93,5 +112,5 @@ if __name__ == '__main__':
 
     main = Server('localhost', args.port, args.inputPath)
     
-    # main.listen_for_clients()
-    # main.start_file_transfer()
+    main.listen_for_clients()
+    main.start_file_transfer()

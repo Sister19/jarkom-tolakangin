@@ -19,7 +19,7 @@ class Client:
         # Three Way Handshake, client-side
         # STEP 1: SYN, initiate connection
         self.segment.set_flag([0, 1, 0]) # SYN flag
-        seqNum = 100
+        seqNum = 0
         self.segment.set_header({
         'seq_num': seqNum,
         'ack_num': 0,
@@ -57,8 +57,21 @@ class Client:
 
     def listen_file_transfer(self):
         # File transfer, client-side
-        pass
-
+        data, addr = self.conn.listen_single_segment()
+        
+        if not(data.get_syn()) and not(data.get_ack()) and not(data.get_fin()):
+            header = data.get_header()
+            serverACK = header['ack_num']
+            serverSeq = header['seq_num']
+            data.set_header({
+            'seq_num': serverACK,
+            'ack_num': serverSeq+1,
+            })
+            data.set_flag([0,0,1])
+            print(f"[Segment SEQ={serverSeq}] Received, Ack sent")
+            self.conn.send_data(data, (self.host,self.destPort))
+        with open(self.outputPath, 'wb') as f:
+            f.write(data.get_payload())
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -68,5 +81,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     main = Client('localhost', args.clientPort, args.broadcastPort, args.outputPath)
-    # main.three_way_handshake()
-    # main.listen_file_transfer()
+    
+    main.three_way_handshake()
+    main.listen_file_transfer()
