@@ -2,20 +2,31 @@ from typing import Union
 import lib.connection
 from lib.segment import Segment
 import lib.segment as segment
-import socket
-import random
+import argparse
+import os
 
 class Server:
-    def __init__(self, host, port):
+    def __init__(self, host, port, filepath):
         # Init server
         self.host = host
         self.port = port
         self.conn = lib.connection.Connection(self.host,self.port)
         self.conn.socket.bind((self.host,self.port))
         self.clients = {}
+        self.filepath = filepath
+        self.payload = self.read_binary()
+        self.filesize = os.path.getsize(self.filepath)
         print(f"[!] Server started at {self.host}:{self.port}")
-        print(f"[!] Source file | unset | x bytes")
+        print(f"[!] Source file | {self.filepath} | {self.filesize} bytes")
         print("[!] Listening to broadcast address for clients.")
+        # print(self.payload)
+
+    def read_binary(self):
+        binary = None
+        with open(self.filepath, 'rb') as f:
+            binary = f.read()
+            f.close()
+        return binary
 
     def listen_for_clients(self):
         # Server listening
@@ -75,6 +86,12 @@ class Server:
 
 
 if __name__ == '__main__':
-    main = Server('localhost',50007)
-    main.listen_for_clients()
-    main.start_file_transfer()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("port", type=int)
+    parser.add_argument("inputPath", type=str)
+    args = parser.parse_args()
+
+    main = Server('localhost', args.port, args.inputPath)
+    
+    # main.listen_for_clients()
+    # main.start_file_transfer()

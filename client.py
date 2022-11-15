@@ -1,16 +1,18 @@
 import lib.connection
 from lib.segment import Segment
 import lib.segment as segment
-import random
+import argparse
 
 class Client:
-    def __init__(self, host, port, destPort):
+    def __init__(self, host, port, destPort, outputPath):
         # Init client
         self.host = host
         self.port = port
         self.destPort = destPort
         self.conn = lib.connection.Connection(host,port)
         self.segment = segment.Segment()
+        self.outputPath = outputPath
+        self.payload = None
         print(f" [!] Client started at {self.host}:{self.port}")
 
     def three_way_handshake(self):
@@ -18,7 +20,6 @@ class Client:
         # STEP 1: SYN, initiate connection
         self.segment.set_flag([0, 1, 0]) # SYN flag
         seqNum = 100
-        self.segment.set_payload(b'test send data')
         self.segment.set_header({
         'seq_num': seqNum,
         'ack_num': 0,
@@ -60,6 +61,12 @@ class Client:
 
 
 if __name__ == '__main__':
-    main = Client('localhost',50006,50007)
-    main.three_way_handshake()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("clientPort", type=int)
+    parser.add_argument("broadcastPort", type=int)
+    parser.add_argument("outputPath", type=str)
+    args = parser.parse_args()
+
+    main = Client('localhost', args.clientPort, args.broadcastPort, args.outputPath)
+    # main.three_way_handshake()
     # main.listen_file_transfer()
