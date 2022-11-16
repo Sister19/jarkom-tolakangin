@@ -16,7 +16,7 @@ class Connection:
     def listen_single_segment(self) -> Segment:
         # Listen single UDP datagram within timeout and convert into segment
         # 32768 is buffer size
-        self.socket.settimeout(10.0)
+        # self.socket.settimeout(300.0)
         data, addr = self.socket.recvfrom(32768)
         seg = Segment()
         seg.set_from_bytes(data)
