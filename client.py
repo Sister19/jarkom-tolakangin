@@ -55,12 +55,11 @@ class Client:
 
     def listen_file_transfer(self):
         # File transfer, client-side
-        
+
         # TODO: IMPLEMENT CLOSING CONNECTION
         for i in range(6):
             data, addr = self.conn.listen_single_segment()
             if not(data.get_syn()) and not(data.get_ack()) and not(data.get_fin()):
-                # print('payload',data.get_payload())
                 header = data.get_header()
                 data.set_header({
                 'seq_num': header['ack_num'],

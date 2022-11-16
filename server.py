@@ -16,6 +16,7 @@ class Server:
         self.filepath = filepath
         self.payload = self.read_binary()
         self.filesize = os.path.getsize(self.filepath)
+        self.buffersize = self.filesize
         self.readOffset = 0
         print(f"[!] Server started at {self.host}:{self.port}")
         print(f"[!] Source file | {self.filepath} | {self.filesize} bytes")
@@ -75,7 +76,11 @@ class Server:
                 if data.get_ack():
                     if data.valid_checksum():
                         print("[!] [Handshake] Connection established.\n")
+
                         self.clients[client_addr] = data
+                        self.buffersize = self.filesize
+                        self.readOffset = 0
+
                         self.file_transfer(client_addr)
                     else:
                         print("[!] [Handhshake] Checksum failed. Connection is terminated.")
@@ -84,8 +89,8 @@ class Server:
 
     def file_transfer(self, client_addr : Union[str, int]):
         size = 32756
-        while (self.filesize > size):
-            self.filesize -= size
+        while (self.buffersize > size):
+            self.buffersize -= size
             
             with open(self.filepath, 'rb') as f:
                 data = self.clients[client_addr]
@@ -112,7 +117,6 @@ class Server:
                     header = resData.get_header()
                     print(f"[Segment SEQ={temp}] Acked")
         else:
-            print('masuk else, sisa',self.filesize)
             with open(self.filepath, 'rb') as f:
                 data = self.clients[client_addr]
                 header = data.get_header()
@@ -123,7 +127,7 @@ class Server:
                 temp = header['ack_num']
                 data.set_flag([0,0,0])
                 f.seek(self.readOffset)
-                data.set_payload(f.read(self.filesize))
+                data.set_payload(f.read(self.buffersize))
                 f.close()
 
                 self.conn.send_data(data, client_addr)
@@ -133,7 +137,7 @@ class Server:
                 if resData.get_ack():
                     self.clients[client_addr] = resData
                     header = resData.get_header()
-                    print(f"[Segment SEQ={temp}] Acked")
+                    print(f"[Segment SEQ={temp}] Acked")       
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
