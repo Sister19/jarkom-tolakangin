@@ -75,9 +75,9 @@ class Segment:
         # jumlahkan data per 2 byte payload
         for i in range(0, len(self.payload), 2):
             if i + 1 < len(self.payload):
-                sums = (sums + struct.unpack('H', self.payload[i:i+2])[0]) & 0xFF
+                sums = (sums + struct.unpack('>H', self.payload[i:i+2])[0]) & 0xFF
             else:
-                sums = (sums + struct.unpack('B', self.payload[i:i+1])[0]) & 0xFF
+                sums = (sums + struct.unpack('>B', self.payload[i:i+1])[0]) & 0xFF
         # kembalikan hasil
         return ~sums & 0xFF
 
@@ -142,7 +142,7 @@ class Segment:
     def set_from_bytes(self, src: bytes):
         # From pure bytes, unpack() and set into python variable
         # asumsi src adalah bytes yang valid termasuk checksumnya
-        temp = struct.unpack('IIBBH', src[:12])
+        temp = struct.unpack('>IIBBH', src[:12])
         self.seq_num = temp[0]
         self.ack_num = temp[1]
         self.flag = SegmentFlag(temp[2])
@@ -151,7 +151,7 @@ class Segment:
 
     def get_bytes(self) -> bytes:
         # Convert this object to pure bytes
-        return struct.pack('IIBBH',
+        return struct.pack('>IIBBH',
                            self.seq_num,
                            self.ack_num,
                            self.flag.get_flag_bytes(), 0b0, self.checksum) + self.payload
