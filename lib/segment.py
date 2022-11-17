@@ -1,8 +1,9 @@
 import struct
 
-from .constant import ACK_FLAG, FIN_FLAG, SYN_FLAG
-
-# Constants
+from .constant import (ACK_FLAG, EXTENSION_END, EXTENSION_MAX_SIZE,
+                       EXTENSION_START, FILENAME_END, FILENAME_MAX_SIZE,
+                       FILENAME_START, FIN_FLAG, PAYLOAD_END, PAYLOAD_MAX_SIZE,
+                       PAYLOAD_START, SYN_FLAG)
 
 
 class SegmentFlag:
@@ -40,9 +41,9 @@ class Segment:
     # 8       : flag (1 byte, unsigned char)
     # 9       : kosong (1 byte, unsigned char)
     # 10-11   : checksum (2 bytes, unsigned short)
-    # 12-3767 : payload (32756 bytes)
-    # 3768-4023   : metadata filename (256 bytes)
-    # 4024-4027   : metadata extension (4 bytes)
+    # 12-32767 : payload (32756 bytes)
+    # 32768-33023   : metadata filename (256 bytes)
+    # 33024-33027   : metadata extension (4 bytes)
     # TOTAL: 33028 bytes
 
     # -- Internal Function --
@@ -205,16 +206,17 @@ class Segment:
         self.ack_num = temp[1]
         self.flag = SegmentFlag(temp[2])
         self.checksum = temp[4]
-        self.payload = src[12:3768]
-        self.metadata_filename = src[3768:4024]
-        self.metadata_extension = src[4024:]
+        self.payload = src[PAYLOAD_START:src.find(b'\x00', PAYLOAD_START+1)]
+        self.metadata_filename = src[FILENAME_START:src.find(
+            b'\x00', FILENAME_START+1)]
+        self.metadata_extension = src[EXTENSION_START:]
 
     def get_bytes(self) -> bytes:
         # Convert this object to pure bytes
         return struct.pack('>IIBBH',
                            self.seq_num,
                            self.ack_num,
-                           self.flag.get_flag_bytes(), 0b0, self.checksum) + self.payload + self.metadata_filename + self.metadata_extension
+                           self.flag.get_flag_bytes(), 0b0, self.checksum) + self.payload + (b'\x00' * (PAYLOAD_MAX_SIZE - len(self.payload))) + self.metadata_filename + (b'\x00' * (FILENAME_MAX_SIZE - len(self.metadata_filename))) + self.metadata_extension
 
     # -- Checksum --
 
@@ -240,9 +242,9 @@ if __name__ == "__main__":
     print('get_header', sampleseg.get_header())
     print('valid checksum', sampleseg.valid_checksum())
 
-    sampleseg.set_payload(b'test payload keren banget')
-    print(sampleseg.get_payload())
-    print(sampleseg.valid_checksum())
+    # sampleseg.set_payload(b'test payload keren banget')
+    # print(sampleseg.get_payload())
+    # print(sampleseg.valid_checksum())
 
     sampleseg.set_metadata_filename(b'hehehe')
     print(sampleseg.get_metadata_filename())
@@ -254,8 +256,8 @@ if __name__ == "__main__":
 
     print(sampleseg)
 
-    sampleseg.payload = b'test payload nahloh ganti paksa'
-    print(sampleseg.get_payload())
-    print(sampleseg.valid_checksum())
+    # sampleseg.payload = b'test payload nahloh ganti paksa'
+    # print(sampleseg.get_payload())
+    # print(sampleseg.valid_checksum())
 
-    print(sampleseg)
+    # print(sampleseg)
