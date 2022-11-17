@@ -1,6 +1,7 @@
 import socket
 from typing import Dict, Union
 from .segment import Segment
+from .constant import MAX_DATA_SIZE
 
 class Connection:
     def __init__(self, ip : str, port : int):
@@ -17,7 +18,7 @@ class Connection:
     def listen_single_segment(self) -> Segment:
         # Listen single UDP datagram within timeout and convert into segment
         # 32768 is buffer size
-        data, addr = self.socket.recvfrom(32768)
+        data, addr = self.socket.recvfrom(MAX_DATA_SIZE)
         seg = Segment()
         seg.set_from_bytes(data)
         return seg, addr
