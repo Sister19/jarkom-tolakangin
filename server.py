@@ -56,7 +56,6 @@ class Server:
         sequenceMax = int(windowSize) + 1
         maxSegment = math.ceil(self.filesize / lib.constant.MAX_DATA_SIZE)
         goBackN = False
-        print(self.filesize)
 
         # Loop until all segments are sent
         while sequenceBase < maxSegment:
@@ -93,7 +92,7 @@ class Server:
 
                 # If ACK is valid
                 if (requestNum > sequenceBase and addr[1] == client_addr[1]):
-                    sequenceMax = int(sequenceMax) + int(sequenceBase) + int(requestNum)
+                    sequenceMax = int(sequenceMax) - int(sequenceBase) + int(requestNum)
                     sequenceBase = int(requestNum)
                     print(f"[Segment SEQ={i}] Acked")
                 # If ACK is invalid
@@ -182,59 +181,7 @@ class Server:
                     else:
                         print("[!] [Handhshake] Checksum failed. Connection is terminated.")
             else:
-                print("[!] [Handhshake] Checksum failed. Connection is terminated.")
-
-    def file_transfer(self, client_addr : Union[str, int]):
-        size = 32756
-        while (self.buffersize > size):
-            self.buffersize -= size
-            
-            with open(self.filepath, 'rb') as f:
-                data = self.clients[client_addr]
-                header = data.get_header()
-                data.set_header({
-                    'seq_num': header['ack_num'],
-                    'ack_num': header['seq_num']
-                })
-                temp = header['ack_num']
-                data.set_flag([0,0,0])
-                f.seek(self.readOffset)
-                payload = f.read(size)
-                # print('payload',payload)
-                data.set_payload(payload)
-                self.readOffset += size
-                f.close()
-
-                self.conn.send_data(data, client_addr)
-                print(f"[Segment SEQ={header['ack_num']} Sent")
-
-                resData, addr = self.conn.listen_single_segment()
-                if resData.get_ack():
-                    self.clients[client_addr] = resData
-                    header = resData.get_header()
-                    print(f"[Segment SEQ={temp}] Acked")
-        else:
-            with open(self.filepath, 'rb') as f:
-                data = self.clients[client_addr]
-                header = data.get_header()
-                data.set_header({
-                    'seq_num': header['ack_num'],
-                    'ack_num': header['seq_num']
-                })
-                temp = header['ack_num']
-                data.set_flag([0,0,0])
-                f.seek(self.readOffset)
-                data.set_payload(f.read(self.buffersize))
-                f.close()
-
-                self.conn.send_data(data, client_addr)
-                print(f"[Segment SEQ={header['ack_num']} Sent")
-
-                resData, addr = self.conn.listen_single_segment()
-                if resData.get_ack():
-                    self.clients[client_addr] = resData
-                    header = resData.get_header()
-                    print(f"[Segment SEQ={temp}] Acked")       
+                print("[!] [Handhshake] Checksum failed. Connection is terminated.")   
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
