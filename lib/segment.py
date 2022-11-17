@@ -55,7 +55,6 @@ class Segment:
         self.checksum = 0b0
         self.metadata_filename = b''
         self.metadata_extension = b''
-        print(self)
 
     def __str__(self):
         output = "{\n"
