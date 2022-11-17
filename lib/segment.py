@@ -201,7 +201,7 @@ class Segment:
     def set_from_bytes(self, src: bytes):
         # From pure bytes, unpack() and set into python variable
         # asumsi src adalah bytes yang valid termasuk checksumnya
-        temp = struct.unpack('>IIBBH', src[:12])
+        temp = struct.unpack('!IIBBH', src[:12])
         self.seq_num = temp[0]
         self.ack_num = temp[1]
         self.flag = SegmentFlag(temp[2])
@@ -213,12 +213,20 @@ class Segment:
 
     def get_bytes(self) -> bytes:
         # Convert this object to pure bytes
-        return struct.pack('>IIBBH',
+        return struct.pack('!IIBBH',
                            self.seq_num,
                            self.ack_num,
-                           self.flag.get_flag_bytes(), 0b0, self.checksum,
-                           self.payload
-                           ) + self.payload + (b'\x00' * (PAYLOAD_MAX_SIZE - len(self.payload))) + self.metadata_filename + (b'\x00' * (FILENAME_MAX_SIZE - len(self.metadata_filename))) + self.metadata_extension
+                           self.flag.get_flag_bytes(), 0b0, self.checksum
+                        #    self.payload +
+                        #    (b'\x00' * (PAYLOAD_MAX_SIZE - len(self.payload))),
+                        #    self.metadata_filename +
+                        #    (b'\x00' * (FILENAME_MAX_SIZE -
+                        #     len(self.metadata_filename))),
+                        #    self.metadata_extension +
+                        #    (b'\x00' * (EXTENSION_MAX_SIZE -
+                        #     len(self.metadata_extension)))
+                        #    )
+           ) + self.payload + (b'\x00' * (PAYLOAD_MAX_SIZE - len(self.payload))) + self.metadata_filename + (b'\x00' * (FILENAME_MAX_SIZE - len(self.metadata_filename))) + self.metadata_extension
 
     # -- Checksum --
 
