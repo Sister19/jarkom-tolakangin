@@ -42,9 +42,10 @@ class Segment:
     # 9       : kosong (1 byte, unsigned char)
     # 10-11   : checksum (2 bytes, unsigned short)
     # 12-32767 : payload (32756 bytes)
-    # 32768-33023   : metadata filename (256 bytes)
-    # 33024-33027   : metadata extension (4 bytes)
-    # TOTAL: 33028 bytes
+    # # 32768-33023   : metadata filename (256 bytes)
+    # # 33024-33027   : metadata extension (4 bytes)
+    # TOTAL (before metadata): 32768 bytes
+    # TOTAL (after metadata): 33028 bytes
 
     # -- Internal Function --
     def __init__(self):
