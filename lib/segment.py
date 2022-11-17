@@ -206,9 +206,9 @@ class Segment:
         self.ack_num = temp[1]
         self.flag = SegmentFlag(temp[2])
         self.checksum = temp[4]
-        self.payload = src[PAYLOAD_START:src.find(b'\x00', PAYLOAD_START+1)]
+        self.payload = src[PAYLOAD_START:src.find(b'\x00', PAYLOAD_START)]
         self.metadata_filename = src[FILENAME_START:src.find(
-            b'\x00', FILENAME_START+1)]
+            b'\x00', FILENAME_START)]
         self.metadata_extension = src[EXTENSION_START:]
 
     def get_bytes(self) -> bytes:
@@ -216,7 +216,9 @@ class Segment:
         return struct.pack('>IIBBH',
                            self.seq_num,
                            self.ack_num,
-                           self.flag.get_flag_bytes(), 0b0, self.checksum) + self.payload + (b'\x00' * (PAYLOAD_MAX_SIZE - len(self.payload))) + self.metadata_filename + (b'\x00' * (FILENAME_MAX_SIZE - len(self.metadata_filename))) + self.metadata_extension
+                           self.flag.get_flag_bytes(), 0b0, self.checksum,
+                           self.payload
+                           ) + self.payload + (b'\x00' * (PAYLOAD_MAX_SIZE - len(self.payload))) + self.metadata_filename + (b'\x00' * (FILENAME_MAX_SIZE - len(self.metadata_filename))) + self.metadata_extension
 
     # -- Checksum --
 
