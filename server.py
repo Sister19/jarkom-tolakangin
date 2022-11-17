@@ -153,7 +153,9 @@ class Server:
                 'seq_num': 0,
                 'ack_num': clientACK+1,
                 })
-                # print(data)
+                data.set_metadata_filename(bytes(self.filepath.split("/")[-1].split(".")[0], "utf-8"))
+                data.set_metadata_extension(bytes(self.filepath.split(".")[-1], "utf-8"))
+                print(data)
                 self.conn.send_data(data, client_addr)
                 print(f"[!] [Handshake] Sending SYN-ACK")
 
@@ -161,16 +163,14 @@ class Server:
                 if data.get_ack():
                     if data.valid_checksum():
                         print("[!] [Handshake] Connection established.\n")
-
                         self.clients[client_addr] = data
                         self.buffersize = self.filesize
                         self.readOffset = 0
-
                         self.file_transfer(client_addr)
                     else:
                         print("[!] [Handhshake] Checksum failed. Connection is terminated.")
             else:
-                print("[!] [Handhshake] Checksum failed. Connection is terminated.")   
+                print("[!] [Handshake] Checksum failed. Connection is terminated.") 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
