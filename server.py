@@ -56,15 +56,16 @@ class Server:
         sequenceMax = int(windowSize) + 1
         maxSegment = math.ceil(self.filesize / lib.constant.MAX_DATA_SIZE)
         goBackN = False
+        error = False
 
         # Loop until all segments are sent
         while sequenceBase < maxSegment:
             # Loop until window is full
             sequenceNum = int(sequenceBase) + 1
+            repeatCount = 0
             while sequenceNum < min(maxSegment+1, sequenceMax):
-                # try:
+                try:
                     data: lib.segment.Segment = self.clients[client_addr]
-                    # if (data.valid_checksum()):
                     if (sequenceNum != maxSegment):
                         data.set_flag([0,0,0])
                         file.seek((sequenceNum-1)*lib.constant.MAX_DATA_SIZE)
@@ -75,7 +76,8 @@ class Server:
                         self.conn.send_data(data, client_addr)
                         print(f"[Segment SEQ={sequenceNum}] Sent to {client_addr[0]}:{client_addr[1]}")
                         sequenceNum += 1
-                    else:
+                        repeatCount = 0
+                    else: # Last segment
                         data.set_flag([1,0,0])
                         file.seek((sequenceNum-1)*lib.constant.MAX_DATA_SIZE)
                         data.set_payload(file.read(lib.constant.MAX_DATA_SIZE))
@@ -85,13 +87,14 @@ class Server:
                         self.conn.send_data(data, client_addr)
                         print(f"[Segment SEQ={sequenceNum}] Sent to {client_addr[0]}:{client_addr[1]}")
                         sequenceNum += 1
-                #     else:
-                #         print(f"[!] [Segment SEQ={sequenceNum}] checksum failed. Connection closed")
-                #         break
-                # except self.conn.socket.timeout:
-                #     print(f"[!] [Segment SEQ={sequenceNum}] timeout. Connection closed")
-                #     break
-            
+                        repeatCount = 0
+                except self.conn.socket.timeout:
+                    print(f"[!] [Segment SEQ={sequenceNum}] Timeout, resending...")
+                    repeatCount += 1
+                    if repeatCount == lib.constant.MAX_REPEAT:
+                        error = True
+                        break
+
             # Wait for ACK
             for i in range(int(sequenceBase)+1, int(sequenceNum)):
                 rcvSeg, addr = self.conn.listen_single_segment()
@@ -116,7 +119,9 @@ class Server:
         
         if goBackN:
             print("[!] Go-Back-N protocol success")
-        print("[!] File transfer completed\n")
+        if (not error):
+            print("[!] File transfer completed\n")
+
         file.close()
         self.close_connection(client_addr)
 
@@ -166,19 +171,19 @@ class Server:
                 self.conn.send_data(data, client_addr)
                 print(f"[!] [Handshake] Sending SYN-ACK")
 
-                try:
-                    data, addr = self.conn.listen_single_segment()
-                    if data.get_ack():
-                        if data.valid_checksum():
-                            print("[!] [Handshake] Connection established.\n")
-                            self.clients[client_addr] = data
-                            self.buffersize = self.filesize
-                            self.readOffset = 0
-                            self.file_transfer(client_addr)
-                        else:
-                            print("[!] [Handhshake] Checksum failed. Connection is terminated.")
-                except self.conn.socket.timeout:
-                    print("[!] [Handshake] Connection timeout. Connection is terminated.")
+                # try:
+                data, addr = self.conn.listen_single_segment()
+                if data.get_ack():
+                    if data.valid_checksum():
+                        print("[!] [Handshake] Connection established.\n")
+                        self.clients[client_addr] = data
+                        self.buffersize = self.filesize
+                        self.readOffset = 0
+                        self.file_transfer(client_addr)
+                    else:
+                        print("[!] [Handhshake] Checksum failed. Connection is terminated.")
+                # except self.conn.socket.timeout:
+                #     print("[!] [Handshake] Connection timeout. Connection is terminated.")
             else:
                 print("[!] [Handshake] Checksum failed. Connection is terminated.")
 

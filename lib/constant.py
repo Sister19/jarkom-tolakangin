@@ -18,5 +18,7 @@ EXTENSION_MAX_SIZE = 4
 
 WINDOW_SIZE = 4
 
+MAX_REPEAT = 3
+
 MAX_DATA_SIZE = 32756	# before metadata
 # MAX_DATA_SIZE = 33028	# after metadata

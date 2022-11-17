@@ -1,5 +1,6 @@
 import lib.connection
 import lib.segment as segment
+import lib.constant as constant
 import argparse
 import os
 
@@ -60,52 +61,55 @@ class Client:
         # File transfer, client-side
         requestNum = 0
         file = open(self.outputPath, "ab", newline=None)
+        goBackN = False
         error = False
+        repeatCount = 0
 
         while True:
-            # try:
-            seg, addr = self.conn.listen_single_segment()
-            sequenceNum = int(seg.get_header()['seq_num'])
-            # if (seg.valid_checksum()):
-            if (sequenceNum == requestNum):
-                requestNum = sequenceNum + 1
-                if (not seg.get_fin()):
-                    file.write(seg.get_payload())
-                    seg.set_flag([0,0,1])
+            try:
+                seg, addr = self.conn.listen_single_segment()
+                sequenceNum = int(seg.get_header()['seq_num'])
+                if (sequenceNum == requestNum):
+                    requestNum = sequenceNum + 1
+                    if (not seg.get_fin()):
+                        file.write(seg.get_payload())
+                        seg.set_flag([0,0,1])
+                        seg.set_header({
+                            'seq_num': sequenceNum,
+                            'ack_num': requestNum,
+                        })
+                        self.conn.send_data(seg, (self.host,self.destPort))
+                        print(f"[Segment SEQ={sequenceNum+1}] received. Ack sent to {self.host}:{self.destPort}")
+                        repeatCount = 0
+                    else: # FIN flag
+                        file.write(seg.get_payload())
+                        seg.set_flag([1,0,1])
+                        seg.set_header({
+                            'seq_num': sequenceNum,
+                            'ack_num': requestNum,
+                        })
+                        self.conn.send_data(seg, (self.host,self.destPort))
+                        print(f"[Segment SEQ={sequenceNum+1}] received. Ack sent to {self.host}:{self.destPort}")
+                        break
+                else:
+                    seg.set_flag([0,0,0])
                     seg.set_header({
-                        'seq_num': sequenceNum,
                         'ack_num': requestNum,
                     })
+                    goBackN = True
                     self.conn.send_data(seg, (self.host,self.destPort))
-                    print(f"[Segment SEQ={sequenceNum+1}] received. Ack sent to {self.host}:{self.destPort}")
-                else: # FIN flag
-                    file.write(seg.get_payload())
-                    seg.set_flag([1,0,1])
-                    seg.set_header({
-                        'seq_num': sequenceNum,
-                        'ack_num': requestNum,
-                    })
-                    self.conn.send_data(seg, (self.host,self.destPort))
-                    print(f"[Segment SEQ={sequenceNum+1}] received. Ack sent to {self.host}:{self.destPort}")
+                    print(f"[Segment SEQ={sequenceNum+1}] damaged. Ack prev SEQ sent to {self.host}:{self.destPort}")
+            except self.conn.socket.timeout:
+                print("[!] Timeout. Connection is terminated.")
+                repeatCount += 1
+                if repeatCount == constant.MAX_REPEAT:
+                    error = True
                     break
-            else:
-                seg.set_flag([0,0,0])
-                seg.set_header({
-                    'ack_num': requestNum,
-                })
-                error = True
-                self.conn.send_data(seg, (self.host,self.destPort))
-                print(f"[Segment SEQ={sequenceNum+1}] damaged. Ack prev SEQ sent to {self.host}:{self.destPort}")
-            # else:
-            #     print(f"[Segment SEQ={sequenceNum+1}] checksum failed. Connection is terminated.")
-            #     break
-            # except self.conn.socket.timeout:
-            #     print("[!] Timeout. Connection is terminated.")
-            #     break
                 
-        if (error):
+        if (goBackN):
             print("[!] Go-Back-N protocol success.")
-        print("[!] File transfer completed.\n")
+        if (not error):
+            print("[!] File transfer completed.\n")
         
         file.close()
         self.close_connection()
