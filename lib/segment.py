@@ -58,7 +58,7 @@ class Segment:
         print(self)
 
     def __str__(self):
-        output = "{"
+        output = "{\n"
         output += f'\tseq_num: {self.seq_num}\n'
         output += f'\tack_num: {self.ack_num}\n'
         output += f'\tflag: {self.flag}\n'
