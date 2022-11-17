@@ -25,6 +25,6 @@ Sebuah simulasi jaringan TCP menggunakan UDP dengan Python. Simulasi meliputi pe
 
 ## Pembagian Tugas
 
-- Muhammad Fikri Ranjabi (13520002): Implementasi client-server, file transfer
+- Muhammad Fikri Ranjabi (13520002): Implementasi client-server, file transfer, three way handshake
 - Diky Restu Maulana (13520017): Implementasi Go-Back-N ARQ
 - Alifia Rahmah (13520122): Pembuatan struktur segment dan connection
