@@ -54,8 +54,8 @@ class Segment:
         self.flag = SegmentFlag(0b0)
         self.payload = b''
         self.checksum = 0b0
-        self.metadata_filename = b''
-        self.metadata_extension = b''
+        # self.metadata_filename = b''
+        # self.metadata_extension = b''
 
     def __str__(self):
         output = "{\n"
@@ -64,8 +64,8 @@ class Segment:
         output += f'\tflag: {self.flag}\n'
         output += f'\tchecksum: {self.checksum}\n'
         output += f'\tpayload: {self.payload}\n'
-        output += f'\tfilename: {self.metadata_filename}\n'
-        output += f'\textension: {self.metadata_extension}\n'
+        # output += f'\tfilename: {self.metadata_filename}\n'
+        # output += f'\textension: {self.metadata_extension}\n'
         output += "}"
         return output
 
@@ -88,21 +88,21 @@ class Segment:
                 sums = (sums + struct.unpack('>B',
                         self.payload[i:i+1])[0]) & 0xFF
         # jumlahkan metadata filename
-        for i in range(0, len(self.metadata_filename), 2):
-            if i + 1 < len(self.metadata_filename):
-                sums = (sums + struct.unpack('>H',
-                        self.metadata_filename[i:i+2])[0]) & 0xFF
-            else:
-                sums = (sums + struct.unpack('>B',
-                        self.metadata_filename[i:i+1])[0]) & 0xFF
+        # for i in range(0, len(self.metadata_filename), 2):
+        #     if i + 1 < len(self.metadata_filename):
+        #         sums = (sums + struct.unpack('>H',
+        #                 self.metadata_filename[i:i+2])[0]) & 0xFF
+        #     else:
+        #         sums = (sums + struct.unpack('>B',
+        #                 self.metadata_filename[i:i+1])[0]) & 0xFF
         # jumlahkan metadata extension
-        for i in range(0, len(self.metadata_extension), 2):
-            if i + 1 < len(self.metadata_extension):
-                sums = (sums + struct.unpack('>H',
-                        self.metadata_extension[i:i+2])[0]) & 0xFF
-            else:
-                sums = (sums + struct.unpack('>B',
-                        self.metadata_extension[i:i+1])[0]) & 0xFF
+        # for i in range(0, len(self.metadata_extension), 2):
+        #     if i + 1 < len(self.metadata_extension):
+        #         sums = (sums + struct.unpack('>H',
+        #                 self.metadata_extension[i:i+2])[0]) & 0xFF
+        #     else:
+        #         sums = (sums + struct.unpack('>B',
+        #                 self.metadata_extension[i:i+1])[0]) & 0xFF
         # kembalikan hasil
         return ~sums & 0xFF
 
@@ -125,10 +125,10 @@ class Segment:
             self.flag = header['flag']
         if ('payload' in header.keys()):
             self.payload = header['payload']
-        if ('filename' in header.keys()):
-            self.metadata_filename = header['filename']
-        if ('extension' in header.keys()):
-            self.metadata_extension = header['extension']
+        # if ('filename' in header.keys()):
+        #     self.metadata_filename = header['filename']
+        # if ('extension' in header.keys()):
+        #     self.metadata_extension = header['extension']
         self.checksum = self.__calculate_checksum()
 
     def set_payload(self, payload: bytes):
@@ -154,13 +154,13 @@ class Segment:
         self.flag.fin = fin
         self.checksum = self.__calculate_checksum()
 
-    def set_metadata_filename(self, filename: bytes):
-        self.metadata_filename = filename
-        self.checksum = self.__calculate_checksum()
+    # def set_metadata_filename(self, filename: bytes):
+    #     self.metadata_filename = filename
+    #     self.checksum = self.__calculate_checksum()
 
-    def set_metadata_extension(self, ext: bytes):
-        self.metadata_extension = ext
-        self.checksum = self.__calculate_checksum()
+    # def set_metadata_extension(self, ext: bytes):
+    #     self.metadata_extension = ext
+    #     self.checksum = self.__calculate_checksum()
 
     # -- Getter --
 
@@ -171,8 +171,8 @@ class Segment:
             'flag': self.flag,
             'checksum': self.checksum,
             'payload': self.payload,
-            'filename': self.metadata_filename,
-            'extension': self.metadata_extension
+            # 'filename': self.metadata_filename,
+            # 'extension': self.metadata_extension
         }
 
     def get_payload(self) -> bytes:
@@ -190,11 +190,11 @@ class Segment:
     def get_fin(self) -> bool:
         return self.flag.fin
 
-    def get_metadata_filename(self) -> bytes:
-        return self.metadata_filename
+    # def get_metadata_filename(self) -> bytes:
+    #     return self.metadata_filename
 
-    def get_metadata_extension(self) -> bytes:
-        return self.metadata_extension
+    # def get_metadata_extension(self) -> bytes:
+    #     return self.metadata_extension
 
     # -- Marshalling --
 
@@ -206,10 +206,10 @@ class Segment:
         self.ack_num = temp[1]
         self.flag = SegmentFlag(temp[2])
         self.checksum = temp[4]
-        self.payload = src[PAYLOAD_START:src.find(b'\x00', PAYLOAD_START)]
-        self.metadata_filename = src[FILENAME_START:src.find(
-            b'\x00', FILENAME_START)]
-        self.metadata_extension = src[EXTENSION_START:]
+        self.payload = src[PAYLOAD_START:] #src.find(b'\x00', PAYLOAD_START)]
+        # self.metadata_filename = src[FILENAME_START:src.find(
+        #     b'\x00', FILENAME_START)]
+        # self.metadata_extension = src[EXTENSION_START:]
 
     def get_bytes(self) -> bytes:
         # Convert this object to pure bytes
@@ -217,16 +217,7 @@ class Segment:
                            self.seq_num,
                            self.ack_num,
                            self.flag.get_flag_bytes(), 0b0, self.checksum
-                        #    self.payload +
-                        #    (b'\x00' * (PAYLOAD_MAX_SIZE - len(self.payload))),
-                        #    self.metadata_filename +
-                        #    (b'\x00' * (FILENAME_MAX_SIZE -
-                        #     len(self.metadata_filename))),
-                        #    self.metadata_extension +
-                        #    (b'\x00' * (EXTENSION_MAX_SIZE -
-                        #     len(self.metadata_extension)))
-                        #    )
-           ) + self.payload + (b'\x00' * (PAYLOAD_MAX_SIZE - len(self.payload))) + self.metadata_filename + (b'\x00' * (FILENAME_MAX_SIZE - len(self.metadata_filename))) + self.metadata_extension
+           ) + self.payload # + (b'\x00' * (PAYLOAD_MAX_SIZE - len(self.payload))) + self.metadata_filename + (b'\x00' * (FILENAME_MAX_SIZE - len(self.metadata_filename))) + self.metadata_extension
 
     # -- Checksum --
 
@@ -256,13 +247,13 @@ if __name__ == "__main__":
     # print(sampleseg.get_payload())
     # print(sampleseg.valid_checksum())
 
-    sampleseg.set_metadata_filename(b'hehehe')
-    print(sampleseg.get_metadata_filename())
-    print(sampleseg.valid_checksum())
+    # sampleseg.set_metadata_filename(b'hehehe')
+    # print(sampleseg.get_metadata_filename())
+    # print(sampleseg.valid_checksum())
 
-    sampleseg.set_metadata_extension(b'jpeg')
-    print(sampleseg.get_metadata_extension())
-    print(sampleseg.valid_checksum())
+    # sampleseg.set_metadata_extension(b'jpeg')
+    # print(sampleseg.get_metadata_extension())
+    # print(sampleseg.valid_checksum())
 
     print(sampleseg)
 

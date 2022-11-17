@@ -156,8 +156,8 @@ class Server:
                 'seq_num': 0,
                 'ack_num': clientACK+1,
                 })
-                data.set_metadata_filename(bytes(self.filepath.split("/")[-1].split(".")[0], "utf-8"))
-                data.set_metadata_extension(bytes(self.filepath.split(".")[-1], "utf-8"))
+                # data.set_metadata_filename(bytes(self.filepath.split("/")[-1].split(".")[0], "utf-8"))
+                # data.set_metadata_extension(bytes(self.filepath.split(".")[-1], "utf-8"))
                 print(data)
                 self.conn.send_data(data, client_addr)
                 print(f"[!] [Handshake] Sending SYN-ACK")
