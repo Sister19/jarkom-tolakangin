@@ -5,6 +5,7 @@ import lib.segment
 import math
 import argparse
 import os
+import socket
 
 class Server:
     def __init__(self, host, port, filepath):
@@ -88,7 +89,7 @@ class Server:
                         print(f"[Segment SEQ={sequenceNum}] Sent to {client_addr[0]}:{client_addr[1]}")
                         sequenceNum += 1
                         repeatCount = 0
-                except self.conn.socket.timeout:
+                except socket.timeout:
                     print(f"[!] [Segment SEQ={sequenceNum}] Timeout, resending...")
                     repeatCount += 1
                     if repeatCount == lib.constant.MAX_REPEAT:

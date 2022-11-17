@@ -3,6 +3,7 @@ import lib.segment as segment
 import lib.constant as constant
 import argparse
 import os
+import socket
 
 class Client:
     def __init__(self, host, port, destPort, outputPath):
@@ -54,7 +55,7 @@ class Client:
                     # print(data)
                 else:
                     print("[!] [Handshake] Checksum failed. Connection is terminated.")
-        except self.conn.socket.timeout:
+        except socket.timeout:
             print("[!] [Handshake] Timeout. Connection is terminated.")
 
     def listen_file_transfer(self):
@@ -99,7 +100,7 @@ class Client:
                     goBackN = True
                     self.conn.send_data(seg, (self.host,self.destPort))
                     print(f"[Segment SEQ={sequenceNum+1}] damaged. Ack prev SEQ sent to {self.host}:{self.destPort}")
-            except self.conn.socket.timeout:
+            except socket.timeout:
                 print("[!] Timeout. Connection is terminated.")
                 repeatCount += 1
                 if repeatCount == constant.MAX_REPEAT:
