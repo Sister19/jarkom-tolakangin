@@ -32,26 +32,29 @@ class Client:
         # print(self.segment)
         print("[!] [Handshake] Waiting for response...")
 
-        data, addr = self.conn.listen_single_segment()
-        print(data)
-        if data.get_syn() and data.get_ack():
-            if data.valid_checksum():
-                print("[!] [Handshake] SYN-ACK received.")
+        try:
+            data, addr = self.conn.listen_single_segment()
+            print(data)
+            if data.get_syn() and data.get_ack():
+                if data.valid_checksum():
+                    print("[!] [Handshake] SYN-ACK received.")
 
-                # STEP 3: send ACK from client to server
-                data.set_flag([0,0,1])
-                header = data.get_header()
-                serverACK = header['ack_num']
-                serverSeq = header['seq_num']
-                data.set_header({
-                'seq_num': serverACK,
-                'ack_num': serverSeq+1,
-                })
-                self.conn.send_data(data, (self.host,self.destPort))
-                print("[!] [Handshake] Connection established. Sending ACK.")
-                # print(data)
-            else:
-                print("[!] [Handshake] Checksum failed. Connection is terminated.")
+                    # STEP 3: send ACK from client to server
+                    data.set_flag([0,0,1])
+                    header = data.get_header()
+                    serverACK = header['ack_num']
+                    serverSeq = header['seq_num']
+                    data.set_header({
+                    'seq_num': serverACK,
+                    'ack_num': serverSeq+1,
+                    })
+                    self.conn.send_data(data, (self.host,self.destPort))
+                    print("[!] [Handshake] Connection established. Sending ACK.")
+                    # print(data)
+                else:
+                    print("[!] [Handshake] Checksum failed. Connection is terminated.")
+        except self.conn.socket.timeout:
+            print("[!] [Handshake] Timeout. Connection is terminated.")
 
     def listen_file_transfer(self):
         # File transfer, client-side
@@ -62,36 +65,39 @@ class Client:
         while True:
             seg, addr = self.conn.listen_single_segment()
             sequenceNum = int(seg.get_header()['seq_num'])
-            if (sequenceNum == requestNum):
-                requestNum = sequenceNum + 1
-                if (not seg.get_fin()):
-                    file.write(seg.get_payload())
-                    seg.set_flag([0,0,1])
+            if (seg.valid_checksum()):
+                if (sequenceNum == requestNum):
+                    requestNum = sequenceNum + 1
+                    if (not seg.get_fin()):
+                        file.write(seg.get_payload())
+                        seg.set_flag([0,0,1])
+                        seg.set_header({
+                            'seq_num': sequenceNum,
+                            'ack_num': requestNum,
+                        })
+                        self.conn.send_data(seg, (self.host,self.destPort))
+                        print(f"[Segment SEQ={sequenceNum+1}] received. Ack sent to {self.host}:{self.destPort}")
+                    else: # FIN flag
+                        file.write(seg.get_payload())
+                        seg.set_flag([1,0,1])
+                        seg.set_header({
+                            'seq_num': sequenceNum,
+                            'ack_num': requestNum,
+                        })
+                        self.conn.send_data(seg, (self.host,self.destPort))
+                        print(f"[Segment SEQ={sequenceNum+1}] received. Ack sent to {self.host}:{self.destPort}")
+                        break
+                else:
+                    seg.set_flag([0,0,0])
                     seg.set_header({
-                        'seq_num': sequenceNum,
                         'ack_num': requestNum,
                     })
+                    error = True
                     self.conn.send_data(seg, (self.host,self.destPort))
-                    print(f"[Segment SEQ={sequenceNum+1}] received. Ack sent to {self.host}:{self.destPort}")
-                else: # FIN flag
-                    file.write(seg.get_payload())
-                    seg.set_flag([1,0,1])
-                    seg.set_header({
-                        'seq_num': sequenceNum,
-                        'ack_num': requestNum,
-                    })
-                    self.conn.send_data(seg, (self.host,self.destPort))
-                    print(f"[Segment SEQ={sequenceNum+1}] received. Ack sent to {self.host}:{self.destPort}")
-                    break
+                    print(f"[Segment SEQ={sequenceNum+1}] damaged. Ack prev SEQ sent to {self.host}:{self.destPort}")
             else:
-                errSeg = segment.Segment()
-                errSeg.set_flag([0,0,0])
-                errSeg.set_header({
-                    'ack_num': requestNum,
-                })
-                error = True
-                self.conn.send_data(errSeg, (self.host,self.destPort))
-                print(f"[Segment SEQ={sequenceNum+1}] damaged. Ack {sequenceNum} sent to {self.host}:{self.destPort}")
+                print(f"[Segment SEQ={sequenceNum+1}] checksum failed. Connection is terminated.")
+                break
         
         if (error):
             print("[!] Go-Back-N protocol success.")
