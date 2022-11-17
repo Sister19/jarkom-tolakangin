@@ -1,6 +1,5 @@
 import lib.connection
 import lib.segment as segment
-import lib.constant as constant
 import argparse
 import os
 import socket
@@ -36,7 +35,6 @@ class Client:
 
         try:
             data, addr = self.conn.listen_single_segment()
-            print(data)
             if data.get_syn() and data.get_ack():
                 if data.valid_checksum():
                     print("[!] [Handshake] SYN-ACK received.")
@@ -54,26 +52,26 @@ class Client:
                     print("[!] [Handshake] Connection established. Sending ACK.")
                     # print(data)
                 else:
-                    print("[!] [Handshake] Checksum failed. Connection is terminated.")
+                    print("[!] [Handhshake] Checksum failed. Connection is terminated.")
         except socket.timeout:
-            print("[!] [Handshake] Timeout. Connection is terminated.")
+            print("[!] [Handshake] Connection timeout. Connection is terminated.")
+            self.close_connection()
 
     def listen_file_transfer(self):
         # File transfer, client-side
         requestNum = 0
         file = open(self.outputPath, "ab", newline=None)
         goBackN = False
-        error = False
-        repeatCount = 0
 
         while True:
             try:
-                seg, addr = self.conn.listen_single_segment()
-                sequenceNum = int(seg.get_header()['seq_num'])
+                rcvSeg, addr = self.conn.listen_single_segment()
+                sequenceNum = int(rcvSeg.get_header()['seq_num'])
                 if (sequenceNum == requestNum):
                     requestNum = sequenceNum + 1
-                    if (not seg.get_fin()):
-                        file.write(seg.get_payload())
+                    if (not rcvSeg.get_fin()):
+                        file.write(rcvSeg.get_payload())
+                        seg = segment.Segment()
                         seg.set_flag([0,0,1])
                         seg.set_header({
                             'seq_num': sequenceNum,
@@ -81,9 +79,9 @@ class Client:
                         })
                         self.conn.send_data(seg, (self.host,self.destPort))
                         print(f"[Segment SEQ={sequenceNum+1}] received. Ack sent to {self.host}:{self.destPort}")
-                        repeatCount = 0
                     else: # FIN flag
-                        file.write(seg.get_payload())
+                        file.write(rcvSeg.get_payload())
+                        seg = segment.Segment()
                         seg.set_flag([1,0,1])
                         seg.set_header({
                             'seq_num': sequenceNum,
@@ -99,18 +97,15 @@ class Client:
                     })
                     goBackN = True
                     self.conn.send_data(seg, (self.host,self.destPort))
-                    print(f"[Segment SEQ={sequenceNum+1}] damaged. Ack prev SEQ sent to {self.host}:{self.destPort}")
+                    print(f"[Segment SEQ={sequenceNum+1}] damaged. Ack {sequenceNum} sent to {self.host}:{self.destPort}")
             except socket.timeout:
-                print("[!] Timeout. Connection is terminated.")
-                repeatCount += 1
-                if repeatCount == constant.MAX_REPEAT:
-                    error = True
-                    break
-                
+                print("[!] [Timeout] No response from server. Connection is terminated.")
+                self.close_connection()
+                break
+        
         if (goBackN):
             print("[!] Go-Back-N protocol success.")
-        if (not error):
-            print("[!] File transfer completed.\n")
+        print("[!] File transfer completed.\n")
         
         file.close()
         self.close_connection()
