@@ -42,8 +42,8 @@ class Segment:
     # 9       : kosong (1 byte, unsigned char)
     # 10-11   : checksum (2 bytes, unsigned short)
     # 12-32767 : payload (32756 bytes)
-    # # 32768-33023   : metadata filename (256 bytes)
-    # # 33024-33027   : metadata extension (4 bytes)
+    # 32768-33023   : metadata filename (256 bytes)
+    # 33024-33027   : metadata extension (4 bytes)
     # TOTAL (before metadata): 32768 bytes
     # TOTAL (after metadata): 33028 bytes
 
@@ -55,8 +55,8 @@ class Segment:
         self.flag = SegmentFlag(0b0)
         self.payload = b''
         self.checksum = 0b0
-        # self.metadata_filename = b''
-        # self.metadata_extension = b''
+        self.metadata_filename = b''
+        self.metadata_extension = b''
 
     def __str__(self):
         output = "{\n"
@@ -65,8 +65,8 @@ class Segment:
         output += f'\tflag: {self.flag}\n'
         output += f'\tchecksum: {self.checksum}\n'
         output += f'\tpayload: {self.payload}\n'
-        # output += f'\tfilename: {self.metadata_filename}\n'
-        # output += f'\textension: {self.metadata_extension}\n'
+        output += f'\tfilename: {self.metadata_filename}\n'
+        output += f'\textension: {self.metadata_extension}\n'
         output += "}"
         return output
 
@@ -126,10 +126,10 @@ class Segment:
             self.flag = header['flag']
         if ('payload' in header.keys()):
             self.payload = header['payload']
-        # if ('filename' in header.keys()):
-        #     self.metadata_filename = header['filename']
-        # if ('extension' in header.keys()):
-        #     self.metadata_extension = header['extension']
+        if ('filename' in header.keys()):
+            self.metadata_filename = header['filename']
+        if ('extension' in header.keys()):
+            self.metadata_extension = header['extension']
         self.checksum = self.__calculate_checksum()
 
     def set_payload(self, payload: bytes):
@@ -155,13 +155,13 @@ class Segment:
         self.flag.fin = fin
         self.checksum = self.__calculate_checksum()
 
-    # def set_metadata_filename(self, filename: bytes):
-    #     self.metadata_filename = filename
-    #     self.checksum = self.__calculate_checksum()
+    def set_metadata_filename(self, filename: bytes):
+        self.metadata_filename = filename
+        self.checksum = self.__calculate_checksum()
 
-    # def set_metadata_extension(self, ext: bytes):
-    #     self.metadata_extension = ext
-    #     self.checksum = self.__calculate_checksum()
+    def set_metadata_extension(self, ext: bytes):
+        self.metadata_extension = ext
+        self.checksum = self.__calculate_checksum()
 
     # -- Getter --
 
@@ -172,8 +172,8 @@ class Segment:
             'flag': self.flag,
             'checksum': self.checksum,
             'payload': self.payload,
-            # 'filename': self.metadata_filename,
-            # 'extension': self.metadata_extension
+            'filename': self.metadata_filename,
+            'extension': self.metadata_extension
         }
 
     def get_payload(self) -> bytes:
@@ -191,11 +191,11 @@ class Segment:
     def get_fin(self) -> bool:
         return self.flag.fin
 
-    # def get_metadata_filename(self) -> bytes:
-    #     return self.metadata_filename
+    def get_metadata_filename(self) -> bytes:
+        return self.metadata_filename
 
-    # def get_metadata_extension(self) -> bytes:
-    #     return self.metadata_extension
+    def get_metadata_extension(self) -> bytes:
+        return self.metadata_extension
 
     # -- Marshalling --
 
@@ -207,10 +207,10 @@ class Segment:
         self.ack_num = temp[1]
         self.flag = SegmentFlag(temp[2])
         self.checksum = temp[4]
-        self.payload = src[PAYLOAD_START:] #src.find(b'\x00', PAYLOAD_START)]
-        # self.metadata_filename = src[FILENAME_START:src.find(
-        #     b'\x00', FILENAME_START)]
-        # self.metadata_extension = src[EXTENSION_START:]
+        self.payload = src[PAYLOAD_START:src.find(b'\x01', PAYLOAD_START)]
+        self.metadata_filename = src[FILENAME_START:src.find(
+            b'\x01', FILENAME_START)]
+        self.metadata_extension = src[EXTENSION_START:]
 
     def get_bytes(self) -> bytes:
         # Convert this object to pure bytes
@@ -218,7 +218,7 @@ class Segment:
                            self.seq_num,
                            self.ack_num,
                            self.flag.get_flag_bytes(), 0b0, self.checksum
-           ) + self.payload # + (b'\x00' * (PAYLOAD_MAX_SIZE - len(self.payload))) + self.metadata_filename + (b'\x00' * (FILENAME_MAX_SIZE - len(self.metadata_filename))) + self.metadata_extension
+           ) + self.payload + (b'\x01' * (PAYLOAD_MAX_SIZE - len(self.payload))) + self.metadata_filename + (b'\x01' * (FILENAME_MAX_SIZE - len(self.metadata_filename))) + self.metadata_extension
 
     # -- Checksum --
 

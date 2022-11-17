@@ -72,6 +72,10 @@ class Server:
                     data.set_header({
                         "seq_num": sequenceNum-1,
                     })
+                    data.set_metadata_filename(
+                        bytes(self.filepath[self.filepath.find('/')+1:self.filepath.find('.')], 'utf-8'))
+                    data.set_metadata_extension(
+                        bytes(self.filepath[self.filepath.find('.')+1:], 'utf-8'))
                     self.conn.send_data(data, client_addr)
                     print(f"[Segment SEQ={sequenceNum}] Sent to {client_addr[0]}:{client_addr[1]}")
                     sequenceNum += 1
