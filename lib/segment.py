@@ -42,6 +42,8 @@ class Segment:
     # 9       : kosong (1 byte, unsigned char)
     # 10-11   : checksum (2 bytes, unsigned short)
     # 12-3767 : payload (32756 bytes)
+    # TODO: add 3768-4024   : metadata filename (256 bytes)
+    # TODO: add 4025-4027   : metadata extension (3 bytes)
 
     # -- Internal Function --
     def __init__(self):
@@ -111,19 +113,19 @@ class Segment:
             flag_list[0] | flag_list[1] << 1 | flag_list[2] << 4)
         self.checksum = self.__calculate_checksum()
 
+    def set_syn(self, syn: bool):
+        self.flag.syn = syn
+        self.checksum = self.__calculate_checksum()
+
+    def set_ack(self, ack: bool):
+        self.flag.ack = ack
+        self.checksum = self.__calculate_checksum()
+
+    def set_fin(self, fin: bool):
+        self.flag.fin = fin
+        self.checksum = self.__calculate_checksum()
+
     # -- Getter --
-
-    def get_flag(self) -> SegmentFlag:
-        return self.flag
-
-    def get_syn(self) -> bool:
-        return self.flag.syn
-
-    def get_ack(self) -> bool:
-        return self.flag.ack
-
-    def get_fin(self) -> bool:
-        return self.flag.fin
 
     def get_header(self) -> dict:
         return {
@@ -136,6 +138,18 @@ class Segment:
 
     def get_payload(self) -> bytes:
         return bytes(self.payload)
+
+    def get_flag(self) -> SegmentFlag:
+        return self.flag
+
+    def get_syn(self) -> bool:
+        return self.flag.syn
+
+    def get_ack(self) -> bool:
+        return self.flag.ack
+
+    def get_fin(self) -> bool:
+        return self.flag.fin
 
     # -- Marshalling --
 
