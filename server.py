@@ -1,7 +1,7 @@
 from typing import Union
 import lib.connection
 import lib.constant
-import lib.segment
+import lib.segment as segment
 import math
 import argparse
 import os
@@ -65,7 +65,7 @@ class Server:
             sequenceNum = int(sequenceBase) + 1
             while sequenceNum < min(maxSegment+1, sequenceMax):
                 if (sequenceNum != maxSegment):
-                    data: lib.segment.Segment = self.clients[client_addr]
+                    data: segment.Segment = self.clients[client_addr]
                     data.set_flag([0,0,0])
                     file.seek((sequenceNum-1)*lib.constant.MAX_DATA_SIZE)
                     data.set_payload(file.read(lib.constant.MAX_DATA_SIZE))
@@ -77,7 +77,7 @@ class Server:
                     sequenceNum += 1
                     repeatCount = 0
                 else:
-                    data: lib.segment.Segment = self.clients[client_addr]
+                    data: segment.Segment = self.clients[client_addr]
                     data.set_flag([1,0,0])
                     file.seek((sequenceNum-1)*lib.constant.MAX_DATA_SIZE)
                     data.set_payload(file.read(lib.constant.MAX_DATA_SIZE))
@@ -106,6 +106,10 @@ class Server:
                         print(f"[Segment SEQ={i}] Not Acked. Wrong client.")
                         print(f"Commencing Go-Back-N protocol from Segment SEQ={i} to {client_addr[0]}:{client_addr[1]}")
                         break
+                    elif rcvSeg.get_fin():
+                        file.close()
+                        self.close_connection(client_addr)
+                        return
                     else:
                         goBackN = True
                         print(f"[Segment SEQ={i}] Not Acked. Duplicate ACK found.")
@@ -116,7 +120,8 @@ class Server:
                     repeatCount += 1
                     if repeatCount > lib.constant.MAX_REPEAT:
                         print(f"[!] [Timeout] Maximum repeat reached. Closing connection with {client_addr[0]}:{client_addr[1]}")
-                        self.close_connection(client_addr)
+                        file.close()
+                        self.close_connection_init(client_addr)
                         return
                     break
         
@@ -124,30 +129,63 @@ class Server:
             print("[!] Go-Back-N protocol success")
         print("[!] File transfer completed\n")
         file.close()
-        self.close_connection(client_addr)
+        self.close_connection_init(client_addr)
 
     def close_connection(self, client_addr : Union[str, int]):
         # Close connection, server-side
         print("[!] Closing connection...")
         
-        rcvFIN, addr = self.conn.listen_single_segment()
-        if (rcvFIN.get_fin() and addr[1] == client_addr[1]):
-            print(f"[!] Received FIN from {addr[0]}:{addr[1]}")
-            tw1 = lib.segment.Segment()
-            tw1.set_flag([0,0,1])
-            self.conn.send_data(tw1, client_addr)
-            print(f"[!] Sending ACK to {client_addr[0]}:{client_addr[1]}")
+        try:
+            rcvFIN, addr = self.conn.listen_single_segment()
+            if (rcvFIN.get_fin() and addr[1] == client_addr[1]):
+                print(f"[!] Received FIN from {addr[0]}:{addr[1]}")
+                tw1 = segment.Segment()
+                tw1.set_flag([0,0,1])
+                self.conn.send_data(tw1, client_addr)
+                print(f"[!] Sending ACK to {client_addr[0]}:{client_addr[1]}")
 
-        tw2 = lib.segment.Segment()
-        tw2.set_flag([1,0,0])
-        print(f"[!] Sending FIN to {client_addr[0]}:{client_addr[1]}")
-        self.conn.send_data(tw2, client_addr)
+            tw2 = segment.Segment()
+            tw2.set_flag([1,0,0])
+            print(f"[!] Sending FIN to {client_addr[0]}:{client_addr[1]}")
+            self.conn.send_data(tw2, client_addr)
 
-        rcvACK, addr = self.conn.listen_single_segment()
-        if (rcvACK.get_ack() and addr[1] == client_addr[1]):
-            print(f"[!] Received ACK from {addr[0]}:{addr[1]}")
-            print(f"[!] Connection closed with {client_addr[0]}:{client_addr[1]}\n")
+            rcvACK, addr = self.conn.listen_single_segment()
+            if (rcvACK.get_ack() and addr[1] == client_addr[1]):
+                print(f"[!] Received ACK from {addr[0]}:{addr[1]}")
+                print(f"[!] Connection closed with {client_addr[0]}:{client_addr[1]}\n")
+        except socket.timeout:
+            print(f"[!] [Timeout] Closing connection with {client_addr[0]}:{client_addr[1]}")
         
+        # if this is the last client, close the server socket
+        if list(self.clients).index(client_addr) == len(self.clients)-1:
+            self.conn.close_socket()
+
+    def close_connection_init(self, client_addr : Union[str, int]):
+        # Close connection, server-side
+        print("[!] Closing connection...")
+        
+        fin = segment.Segment()
+        fin.set_flag([1,0,0])
+        print(f"[!] Sending FIN to {client_addr[0]}:{client_addr[1]}")
+        self.conn.send_data(fin, client_addr)
+
+        try:
+            fw1, addr = self.conn.listen_single_segment()
+            if fw1.get_ack():
+                print(f"[!] Received ACK from {addr[0]}:{addr[1]}")
+
+            fw2, addr = self.conn.listen_single_segment()
+            if fw2.get_fin():
+                print(f"[!] Received FIN from {addr[0]}:{addr[1]}")
+
+            tw = segment.Segment()
+            tw.set_flag([0,0,1])
+            print(f"[!] Sending ACK to {client_addr[0]}:{client_addr[1]}")
+            self.conn.send_data(tw, client_addr)
+            print(f"[!] Connection closed with {client_addr[0]}:{client_addr[1]}\n")
+        except socket.timeout:
+            print(f"[!] [Timeout] Closing connection with {client_addr[0]}:{client_addr[1]}")
+
         # if this is the last client, close the server socket
         if list(self.clients).index(client_addr) == len(self.clients)-1:
             self.conn.close_socket()
@@ -156,7 +194,7 @@ class Server:
         # Three way handshake, server-side, 1 client
 
         # STEP 2: SYN-ACK from server to client
-        data: lib.segment.Segment = self.clients[client_addr]
+        data: segment.Segment = self.clients[client_addr]
         if data.get_syn():
             if data.valid_checksum():
                 header = data.get_header()
@@ -185,7 +223,7 @@ class Server:
                             print("[!] [Handhshake] Checksum failed. Connection is terminated.")
                 except socket.timeout:
                     print("[!] [Timeout] Connection is terminated.")
-                    self.close_connection(client_addr)
+                    self.close_connection_init(client_addr)
             else:
                 print("[!] [Handhshake] Checksum failed. Connection is terminated.")   
 

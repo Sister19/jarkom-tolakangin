@@ -55,7 +55,7 @@ class Client:
                     print("[!] [Handhshake] Checksum failed. Connection is terminated.")
         except socket.timeout:
             print("[!] [Handshake] Connection timeout. Connection is terminated.")
-            self.close_connection()
+            self.close_connection_init()
 
     def listen_file_transfer(self):
         # File transfer, client-side
@@ -65,12 +65,12 @@ class Client:
 
         while True:
             try:
-                rcvSeg, addr = self.conn.listen_single_segment()
-                sequenceNum = int(rcvSeg.get_header()['seq_num'])
+                seg, addr = self.conn.listen_single_segment()
+                sequenceNum = int(seg.get_header()['seq_num'])
                 if (sequenceNum == requestNum):
                     requestNum = sequenceNum + 1
-                    if (not rcvSeg.get_fin()):
-                        file.write(rcvSeg.get_payload())
+                    if (not seg.get_fin()):
+                        file.write(seg.get_payload())
                         seg = segment.Segment()
                         seg.set_flag([0,0,1])
                         seg.set_header({
@@ -80,7 +80,7 @@ class Client:
                         self.conn.send_data(seg, (self.host,self.destPort))
                         print(f"[Segment SEQ={sequenceNum+1}] received. Ack sent to {self.host}:{self.destPort}")
                     else: # FIN flag
-                        file.write(rcvSeg.get_payload())
+                        file.write(seg.get_payload())
                         seg = segment.Segment()
                         seg.set_flag([1,0,1])
                         seg.set_header({
@@ -90,6 +90,9 @@ class Client:
                         self.conn.send_data(seg, (self.host,self.destPort))
                         print(f"[Segment SEQ={sequenceNum+1}] received. Ack sent to {self.host}:{self.destPort}")
                         break
+                elif (seg.get_fin()):
+                    file.close()
+                    self.close_connection()
                 else:
                     seg.set_flag([0,0,0])
                     seg.set_header({
@@ -100,7 +103,7 @@ class Client:
                     print(f"[Segment SEQ={sequenceNum+1}] damaged. Ack {sequenceNum} sent to {self.host}:{self.destPort}")
             except socket.timeout:
                 print("[!] [Timeout] No response from server. Connection is terminated.")
-                self.close_connection()
+                self.close_connection_init()
                 break
         
         if (goBackN):
@@ -111,6 +114,33 @@ class Client:
         self.close_connection()
 
     def close_connection(self):
+        print("[!] Closing connection...")
+        
+        try:
+            rcvFIN, addr = self.conn.listen_single_segment()
+            if (rcvFIN.get_fin() and addr[1] == self.destPort):
+                print(f"[!] Received FIN from {addr[0]}:{addr[1]}")
+                tw1 = segment.Segment()
+                tw1.set_flag([0,0,1])
+                self.conn.send_data(tw1, (self.host,self.destPort))
+                print(f"[!] Sending ACK to server")
+
+            tw2 = segment.Segment()
+            tw2.set_flag([1,0,0])
+            print(f"[!] Sending FIN to server")
+            self.conn.send_data(tw2, (self.host,self.destPort))
+
+            rcvACK, addr = self.conn.listen_single_segment()
+            if (rcvACK.get_ack() and addr[1] == self.destPort):
+                print(f"[!] Received ACK from {addr[0]}:{addr[1]}")
+                print(f"[!] Connection closed with server\n")
+        except socket.timeout:
+            print("[!] [Timeout] No response from server. Connection is terminated.")
+        
+        # close client socket
+        self.conn.close_socket()
+
+    def close_connection_init(self):
         # Close connection, client-side
         print("[!] Closing connection...")
         
@@ -119,20 +149,23 @@ class Client:
         print("[!] Sending FIN to server...")
         self.conn.send_data(fin, (self.host,self.destPort))
 
-        print("[!] Waiting for server response...")
-        fw1, addr = self.conn.listen_single_segment()
-        if fw1.get_ack():
-            print("[!] Received ACK from server")
+        try:
+            print("[!] Waiting for server response...")
+            fw1, addr = self.conn.listen_single_segment()
+            if fw1.get_ack():
+                print("[!] Received ACK from server")
 
-        fw2, addr = self.conn.listen_single_segment()
-        if fw2.get_fin():
-            print("[!] Received FIN from server")
+            fw2, addr = self.conn.listen_single_segment()
+            if fw2.get_fin():
+                print("[!] Received FIN from server")
 
-        tw = segment.Segment()
-        tw.set_flag([0,0,1])
-        print("[!] Sending ACK to server...")
-        self.conn.send_data(tw, (self.host,self.destPort))
-        print("[!] Connection closed with server")
+            tw = segment.Segment()
+            tw.set_flag([0,0,1])
+            print("[!] Sending ACK to server...")
+            self.conn.send_data(tw, (self.host,self.destPort))
+            print("[!] Connection closed with server")
+        except socket.timeout:
+            print("[!] [Timeout] No response from server. Connection is terminated.")
 
         # close client socket
         self.conn.close_socket()
