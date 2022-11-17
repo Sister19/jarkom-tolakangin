@@ -1,10 +1,7 @@
 import struct
+from .constant import SYN_FLAG, FIN_FLAG, ACK_FLAG
 
 # Constants
-SYN_FLAG = 0b10     # pada bit ke-1
-ACK_FLAG = 0b10000  # pada bit ke-4
-FIN_FLAG = 0b1      # pada bit ke-0
-
 
 class SegmentFlag:
     # flag_bytes: unsigned char
