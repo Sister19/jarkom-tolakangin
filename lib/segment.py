@@ -1,7 +1,9 @@
 import struct
-from .constant import SYN_FLAG, FIN_FLAG, ACK_FLAG
+
+from .constant import ACK_FLAG, FIN_FLAG, SYN_FLAG
 
 # Constants
+
 
 class SegmentFlag:
     # flag_bytes: unsigned char
@@ -112,6 +114,8 @@ class Segment:
         #   'ack_num': int,
         #   'flag': SegmentFlag,
         #   'payload': bytes
+        #   'filename': bytes
+        #   'extension': bytes
         # }
         if ('seq_num' in header.keys()):
             self.seq_num = header['seq_num']
@@ -121,6 +125,10 @@ class Segment:
             self.flag = header['flag']
         if ('payload' in header.keys()):
             self.payload = header['payload']
+        if ('filename' in header.keys()):
+            self.metadata_filename = header['filename']
+        if ('extension' in header.keys()):
+            self.metadata_extension = header['extension']
         self.checksum = self.__calculate_checksum()
 
     def set_payload(self, payload: bytes):
@@ -162,7 +170,9 @@ class Segment:
             'ack_num': self.ack_num,
             'flag': self.flag,
             'checksum': self.checksum,
-            'payload': self.payload
+            'payload': self.payload,
+            'filename': self.metadata_filename,
+            'extension': self.metadata_extension
         }
 
     def get_payload(self) -> bytes:
@@ -196,14 +206,16 @@ class Segment:
         self.ack_num = temp[1]
         self.flag = SegmentFlag(temp[2])
         self.checksum = temp[4]
-        self.payload = src[12:]
+        self.payload = src[12:3768]
+        self.metadata_filename = src[3768:4024]
+        self.metadata_extension = src[4024:]
 
     def get_bytes(self) -> bytes:
         # Convert this object to pure bytes
         return struct.pack('>IIBBH',
                            self.seq_num,
                            self.ack_num,
-                           self.flag.get_flag_bytes(), 0b0, self.checksum) + self.payload
+                           self.flag.get_flag_bytes(), 0b0, self.checksum) + self.payload + self.metadata_filename + self.metadata_extension
 
     # -- Checksum --
 
