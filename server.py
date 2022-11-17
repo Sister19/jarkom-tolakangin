@@ -62,8 +62,9 @@ class Server:
             # Loop until window is full
             sequenceNum = int(sequenceBase) + 1
             while sequenceNum < min(maxSegment+1, sequenceMax):
-                data: lib.segment.Segment = self.clients[client_addr]
-                if (data.valid_checksum()):
+                # try:
+                    data: lib.segment.Segment = self.clients[client_addr]
+                    # if (data.valid_checksum()):
                     if (sequenceNum != maxSegment):
                         data.set_flag([0,0,0])
                         file.seek((sequenceNum-1)*lib.constant.MAX_DATA_SIZE)
@@ -84,9 +85,12 @@ class Server:
                         self.conn.send_data(data, client_addr)
                         print(f"[Segment SEQ={sequenceNum}] Sent to {client_addr[0]}:{client_addr[1]}")
                         sequenceNum += 1
-                else:
-                    print(f"[!] [Segment SEQ={sequenceNum}] checksum failed. Connection closed")
-                    break
+                #     else:
+                #         print(f"[!] [Segment SEQ={sequenceNum}] checksum failed. Connection closed")
+                #         break
+                # except self.conn.socket.timeout:
+                #     print(f"[!] [Segment SEQ={sequenceNum}] timeout. Connection closed")
+                #     break
             
             # Wait for ACK
             for i in range(int(sequenceBase)+1, int(sequenceNum)):

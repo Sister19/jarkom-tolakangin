@@ -63,6 +63,7 @@ class Client:
         error = False
 
         while True:
+            # try:
             seg, addr = self.conn.listen_single_segment()
             sequenceNum = int(seg.get_header()['seq_num'])
             if (seg.valid_checksum()):
@@ -98,7 +99,10 @@ class Client:
             else:
                 print(f"[Segment SEQ={sequenceNum+1}] checksum failed. Connection is terminated.")
                 break
-        
+            # except self.conn.socket.timeout:
+            #     print("[!] Timeout. Connection is terminated.")
+            #     break
+                
         if (error):
             print("[!] Go-Back-N protocol success.")
         print("[!] File transfer completed.\n")
