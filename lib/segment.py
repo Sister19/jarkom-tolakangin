@@ -28,7 +28,7 @@ class SegmentFlag:
         return self.flag_bytes
 
     def isSyn(self) -> bool:
-        return 
+        return
 
 
 class Segment:
@@ -39,8 +39,9 @@ class Segment:
     # 9       : kosong (1 byte, unsigned char)
     # 10-11   : checksum (2 bytes, unsigned short)
     # 12-3767 : payload (32756 bytes)
-    # TODO: add 3768-4024   : metadata filename (256 bytes)
-    # TODO: add 4025-4027   : metadata extension (3 bytes)
+    # 3768-4023   : metadata filename (256 bytes)
+    # 4024-4027   : metadata extension (4 bytes)
+    # TOTAL: 33028 bytes
 
     # -- Internal Function --
     def __init__(self):
@@ -49,7 +50,10 @@ class Segment:
         self.ack_num = 0b0
         self.flag = SegmentFlag(0b0)
         self.payload = b''
-        self.checksum = self.__calculate_checksum()
+        self.checksum = 0b0
+        self.metadata_filename = b''
+        self.metadata_extension = b''
+        print(self)
 
     def __str__(self):
         output = "{"
@@ -58,6 +62,8 @@ class Segment:
         output += f'\tflag: {self.flag}\n'
         output += f'\tchecksum: {self.checksum}\n'
         output += f'\tpayload: {self.payload}\n'
+        output += f'\tfilename: {self.metadata_filename}\n'
+        output += f'\textension: {self.metadata_extension}\n'
         output += "}"
         return output
 
@@ -74,9 +80,27 @@ class Segment:
         # jumlahkan data per 2 byte payload
         for i in range(0, len(self.payload), 2):
             if i + 1 < len(self.payload):
-                sums = (sums + struct.unpack('>H', self.payload[i:i+2])[0]) & 0xFF
+                sums = (sums + struct.unpack('>H',
+                        self.payload[i:i+2])[0]) & 0xFF
             else:
-                sums = (sums + struct.unpack('>B', self.payload[i:i+1])[0]) & 0xFF
+                sums = (sums + struct.unpack('>B',
+                        self.payload[i:i+1])[0]) & 0xFF
+        # jumlahkan metadata filename
+        for i in range(0, len(self.metadata_filename), 2):
+            if i + 1 < len(self.metadata_filename):
+                sums = (sums + struct.unpack('>H',
+                        self.metadata_filename[i:i+2])[0]) & 0xFF
+            else:
+                sums = (sums + struct.unpack('>B',
+                        self.metadata_filename[i:i+1])[0]) & 0xFF
+        # jumlahkan metadata extension
+        for i in range(0, len(self.metadata_extension), 2):
+            if i + 1 < len(self.metadata_extension):
+                sums = (sums + struct.unpack('>H',
+                        self.metadata_extension[i:i+2])[0]) & 0xFF
+            else:
+                sums = (sums + struct.unpack('>B',
+                        self.metadata_extension[i:i+1])[0]) & 0xFF
         # kembalikan hasil
         return ~sums & 0xFF
 
@@ -122,6 +146,14 @@ class Segment:
         self.flag.fin = fin
         self.checksum = self.__calculate_checksum()
 
+    def set_metadata_filename(self, filename: bytes):
+        self.metadata_filename = filename
+        self.checksum = self.__calculate_checksum()
+
+    def set_metadata_extension(self, ext: bytes):
+        self.metadata_extension = ext
+        self.checksum = self.__calculate_checksum()
+
     # -- Getter --
 
     def get_header(self) -> dict:
@@ -147,6 +179,12 @@ class Segment:
 
     def get_fin(self) -> bool:
         return self.flag.fin
+
+    def get_metadata_filename(self) -> bytes:
+        return self.metadata_filename
+
+    def get_metadata_extension(self) -> bytes:
+        return self.metadata_extension
 
     # -- Marshalling --
 
@@ -195,6 +233,18 @@ if __name__ == "__main__":
     print(sampleseg.get_payload())
     print(sampleseg.valid_checksum())
 
+    sampleseg.set_metadata_filename(b'hehehe')
+    print(sampleseg.get_metadata_filename())
+    print(sampleseg.valid_checksum())
+
+    sampleseg.set_metadata_extension(b'jpeg')
+    print(sampleseg.get_metadata_extension())
+    print(sampleseg.valid_checksum())
+
+    print(sampleseg)
+
     sampleseg.payload = b'test payload nahloh ganti paksa'
     print(sampleseg.get_payload())
     print(sampleseg.valid_checksum())
+
+    print(sampleseg)
