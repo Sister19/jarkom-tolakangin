@@ -100,20 +100,6 @@ class Client:
         
         file.close()
         self.close_connection()
-        
-        # if not(data.get_syn()) and not(data.get_ack()) and not(data.get_fin()):
-        #     header = data.get_header()
-        #     serverACK = header['ack_num']
-        #     serverSeq = header['seq_num']
-        #     data.set_header({
-        #     'seq_num': serverACK,
-        #     'ack_num': serverSeq+1,
-        #     })
-        #     data.set_flag([0,0,1])
-        #     print(f"[Segment SEQ={serverSeq}] Received, Ack sent")
-        #     self.conn.send_data(data, (self.host,self.destPort))
-        # with open(self.outputPath, 'wb') as f:
-        #     f.write(data.get_payload())
 
     def close_connection(self):
         # Close connection, client-side

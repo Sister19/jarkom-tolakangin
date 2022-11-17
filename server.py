@@ -113,26 +113,6 @@ class Server:
         file.close()
         self.close_connection(client_addr)
 
-        # data: Segment = self.clients[client_addr]
-        # header = data.get_header()
-        # prevSeq = header['seq_num']
-        # prevACK = header['ack_num']
-        # data.set_flag([0,0,0])
-        # data.set_header({
-        #     'seq_num': prevACK,
-        #     'ack_num': prevSeq+1
-        # })
-        # data.set_payload(self.payload)
-        # self.conn.send_data(data, client_addr)
-        # print(f"[Segment SEQ={prevACK}] Sent")
-
-        # resData, addr = self.conn.listen_single_segment()
-        # header = resData.get_header()
-        # prevSeq = header['seq_num']
-        # prevACK = header['ack_num']
-        # if resData.get_ack():
-        #     print(f"[Segment SEQ={prevACK-1}] Acked")
-
     def close_connection(self, client_addr : Union[str, int]):
         # Close connection, server-side
         print("[!] Closing connection...")
