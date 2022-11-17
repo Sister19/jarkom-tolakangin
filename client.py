@@ -125,6 +125,9 @@ class Client:
         self.conn.send_data(tw, (self.host,self.destPort))
         print("[!] Connection closed with server")
 
+        # close client socket
+        self.conn.close_socket()
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("clientPort", type=int)

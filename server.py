@@ -134,6 +134,10 @@ class Server:
         if (rcvACK.get_ack() and addr[1] == client_addr[1]):
             print(f"[!] Received ACK from {addr[0]}:{addr[1]}")
             print(f"[!] Connection closed with {client_addr[0]}:{client_addr[1]}\n")
+        
+        # if this is the last client, close the server socket
+        if list(self.clients).index(client_addr) == len(self.clients)-1:
+            self.conn.close_socket()
 
     def three_way_handshake(self, client_addr: Union[str, int]) -> bool:
         # Three way handshake, server-side, 1 client
