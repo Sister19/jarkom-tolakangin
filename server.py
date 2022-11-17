@@ -120,14 +120,14 @@ class Server:
         rcvFIN, addr = self.conn.listen_single_segment()
         if (rcvFIN.get_fin() and addr[1] == client_addr[1]):
             print(f"[!] Received FIN from {addr[0]}:{addr[1]}")
-            data: lib.segment.Segment = self.clients[client_addr]
-            data.set_flag([0,1,0])
-            self.conn.send_data(data, client_addr)
-            print(f"Sending ACK to {client_addr[0]}:{client_addr[1]}")
+            tw1 = lib.segment.Segment()
+            tw1.set_flag([0,0,1])
+            self.conn.send_data(tw1, client_addr)
+            print(f"[!] Sending ACK to {client_addr[0]}:{client_addr[1]}")
 
         tw2 = lib.segment.Segment()
         tw2.set_flag([1,0,0])
-        print(f"Sending FIN to {client_addr[0]}:{client_addr[1]}")
+        print(f"[!] Sending FIN to {client_addr[0]}:{client_addr[1]}")
         self.conn.send_data(tw2, client_addr)
 
         rcvACK, addr = self.conn.listen_single_segment()

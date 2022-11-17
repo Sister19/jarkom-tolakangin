@@ -96,7 +96,7 @@ class Client:
         
         if (error):
             print("[!] Go-Back-N protocol success.")
-        print("[!] File transfer completed.")
+        print("[!] File transfer completed.\n")
         
         file.close()
         self.close_connection()
@@ -107,23 +107,23 @@ class Client:
         
         fin = segment.Segment()
         fin.set_flag([1,0,0])
-        print("Sending FIN to server...")
+        print("[!] Sending FIN to server...")
         self.conn.send_data(fin, (self.host,self.destPort))
 
-        print("Waiting for server response...")
+        print("[!] Waiting for server response...")
         fw1, addr = self.conn.listen_single_segment()
         if fw1.get_ack():
-            print("Received ACK from server")
+            print("[!] Received ACK from server")
 
         fw2, addr = self.conn.listen_single_segment()
         if fw2.get_fin():
-            print("Received FIN from server")
+            print("[!] Received FIN from server")
 
         tw = segment.Segment()
         tw.set_flag([0,0,1])
-        print("Sending ACK to server...")
+        print("[!] Sending ACK to server...")
         self.conn.send_data(tw, (self.host,self.destPort))
-        print(f"[!] Connection closed with {self.host}:{self.destPort}")
+        print("[!] Connection closed with server")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
