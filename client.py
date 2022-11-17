@@ -104,23 +104,26 @@ class Client:
     def close_connection(self):
         # Close connection, client-side
         print("[!] Closing connection...")
-        fw = segment.Segment()
-        fw.set_flag([1,0,1])
-        print("Sending FIN to server...")
         
-        self.conn.send_data(fw, (self.host,self.destPort))
+        fin = segment.Segment()
+        fin.set_flag([1,0,0])
+        print("Sending FIN to server...")
+        self.conn.send_data(fin, (self.host,self.destPort))
+
         print("Waiting for server response...")
-        self.conn.listen_single_segment()
-        print("Received ACK from server")
-        self.conn.listen_single_segment()
-        print("Received FIN-ACK from server")
+        fw1, addr = self.conn.listen_single_segment()
+        if fw1.get_ack():
+            print("Received ACK from server")
 
-        fw3 = segment.Segment()
-        fw3.set_flag([0,0,1])
+        fw2, addr = self.conn.listen_single_segment()
+        if fw2.get_fin():
+            print("Received FIN from server")
+
+        tw = segment.Segment()
+        tw.set_flag([0,0,1])
         print("Sending ACK to server...")
-        self.conn.send_data(fw3, (self.host,self.destPort))
+        self.conn.send_data(tw, (self.host,self.destPort))
         print(f"[!] Connection closed with {self.host}:{self.destPort}")
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

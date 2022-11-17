@@ -109,26 +109,31 @@ class Server:
         
         if goBackN:
             print("[!] Go-Back-N protocol success")
-        print("[!] File transfer completed")
+        print("[!] File transfer completed\n")
         file.close()
         self.close_connection(client_addr)
 
     def close_connection(self, client_addr : Union[str, int]):
         # Close connection, server-side
         print("[!] Closing connection...")
-
-        print("Sending ACK from server...")
-        tw = lib.segment.Segment()
-        tw.set_flag([0,0,1])
-        self.conn.send_data(tw, client_addr)
         
-        print("Sending FIN from server...")
+        rcvFIN, addr = self.conn.listen_single_segment()
+        if (rcvFIN.get_fin() and addr[1] == client_addr[1]):
+            print(f"[!] Received FIN from {addr[0]}:{addr[1]}")
+            data: lib.segment.Segment = self.clients[client_addr]
+            data.set_flag([0,1,0])
+            self.conn.send_data(data, client_addr)
+            print(f"Sending ACK to {client_addr[0]}:{client_addr[1]}")
+
         tw2 = lib.segment.Segment()
         tw2.set_flag([1,0,0])
+        print(f"Sending FIN to {client_addr[0]}:{client_addr[1]}")
         self.conn.send_data(tw2, client_addr)
 
-        print("Get ACK close from client")
-        print(f"[!] Connection closed with {client_addr[0]}:{client_addr[1]}")
+        rcvACK, addr = self.conn.listen_single_segment()
+        if (rcvACK.get_ack() and addr[1] == client_addr[1]):
+            print(f"[!] Received ACK from {addr[0]}:{addr[1]}")
+            print(f"[!] Connection closed with {client_addr[0]}:{client_addr[1]}\n")
 
     def three_way_handshake(self, client_addr: Union[str, int]) -> bool:
         # Three way handshake, server-side, 1 client
